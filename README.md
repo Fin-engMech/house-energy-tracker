@@ -139,3 +139,5 @@ running just opens another window.
 
 MIT: see [LICENSE](LICENSE). Weather data comes from [Open-Meteo](https://open-meteo.com/) under
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+
+Built with help from [Claude](https://claude.ai).
