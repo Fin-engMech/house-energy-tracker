@@ -1,0 +1,9 @@
+# Keep Unix line endings for files that run on Linux and macOS, even in a Windows checkout
+# (a CRLF shell script fails with "/bin/sh^M: bad interpreter").
+*.sh      text eol=lf
+PKGBUILD  text eol=lf
+*.desktop text eol=lf
+*.py      text eol=lf
+*.png  binary
+*.ico  binary
+*.icns binary

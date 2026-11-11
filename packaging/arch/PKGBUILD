@@ -1,0 +1,38 @@
+# Builds a package from this checkout:   cd packaging/arch && makepkg -si
+pkgname=house-energy-tracker
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Track gas and electricity use against a capped energy bill"
+arch=('x86_64' 'aarch64')
+url="https://github.com/Fin-engMech/house-energy-tracker"
+license=('MIT')
+depends=('gtk3' 'webkit2gtk-4.1' 'xdg-utils')
+makedepends=('cargo')
+options=('!lto' '!debug')
+
+_src() { cd "$startdir/../.."; }
+
+# The version is Cargo.toml's (makepkg writes it back into pkgver above).
+pkgver() {
+  _src
+  sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1
+}
+
+build() {
+  _src
+  export CARGO_TARGET_DIR="$srcdir/target"
+  cargo build --release --locked
+}
+
+check() {
+  _src
+  CARGO_TARGET_DIR="$srcdir/target" cargo test --release --locked
+}
+
+package() {
+  _src
+  install -Dm755 "$srcdir/target/release/energy-tracker" "$pkgdir/usr/bin/energy-tracker"
+  install -Dm644 icon.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/house-energy-tracker.svg"
+  install -Dm644 packaging/linux/house-energy-tracker.desktop "$pkgdir/usr/share/applications/house-energy-tracker.desktop"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

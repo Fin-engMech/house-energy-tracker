@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <title>House Energy Tracker</title>
+  <!-- ink tile with a faint edge so it holds on dark panels -->
+  <rect x="8" y="8" width="112" height="112" rx="26" fill="#1f2023"/>
+  <rect x="9" y="9" width="110" height="110" rx="25" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="2"/>
+  <!-- meter dial: a 270° track, filling with electricity (amber) then gas (blue) towards the cap -->
+  <path d="M39.96 92.04A34 34 0 1 1 88.04 92.04" fill="none" stroke="#4a4c52" stroke-width="11" stroke-linecap="round"/>
+  <path d="M39.96 92.04A34 34 0 0 1 52.37 36.05" fill="none" stroke="#e5a00d" stroke-width="11" stroke-linecap="round"/>
+  <path d="M59.27 34.33A34 34 0 0 1 93.44 51.00" fill="none" stroke="#2f74d0" stroke-width="11" stroke-linecap="round"/>
+  <!-- bolt in the middle of the dial -->
+  <path d="M65 18H79L69 52H89L55 110L61 72H39Z" fill="#fff" transform="translate(64 68) scale(0.4) translate(-64 -64)"/>
+</svg>

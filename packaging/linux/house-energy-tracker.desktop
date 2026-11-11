@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=House Energy Tracker
+Comment=Track gas and electricity against your capped bill
+Exec=energy-tracker
+Icon=house-energy-tracker
+Terminal=false
+StartupWMClass=house-energy-tracker
+Categories=Utility;
+Actions=safe;
+
+[Desktop Action safe]
+Name=Open with safe rendering
+Exec=energy-tracker --safe-render

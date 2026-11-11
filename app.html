@@ -1,0 +1,1465 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>House Energy Tracker</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22 width=%22128%22 height=%22128%22%3E%3Crect x=%228%22 y=%228%22 width=%22112%22 height=%22112%22 rx=%2226%22 fill=%22%231f2023%22/%3E%3Crect x=%229%22 y=%229%22 width=%22110%22 height=%22110%22 rx=%2225%22 fill=%22none%22 stroke=%22%23fff%22 stroke-opacity=%22.12%22 stroke-width=%222%22/%3E%3Cpath d=%22M39.96 92.04A34 34 0 1 1 88.04 92.04%22 fill=%22none%22 stroke=%22%234a4c52%22 stroke-width=%2211%22 stroke-linecap=%22round%22/%3E%3Cpath d=%22M39.96 92.04A34 34 0 0 1 52.37 36.05%22 fill=%22none%22 stroke=%22%23e5a00d%22 stroke-width=%2211%22 stroke-linecap=%22round%22/%3E%3Cpath d=%22M59.27 34.33A34 34 0 0 1 93.44 51.00%22 fill=%22none%22 stroke=%22%232f74d0%22 stroke-width=%2211%22 stroke-linecap=%22round%22/%3E%3Cpath d=%22M65 18H79L69 52H89L55 110L61 72H39Z%22 fill=%22%23fff%22 transform=%22translate%2864 68%29 scale%280.4%29 translate%28-64 -64%29%22/%3E%3C/svg%3E">
+<style>
+/* A dense desktop dashboard: a slim toolbar, a status bar, flat panels on a neutral ground.
+   The chrome is monochrome, so colour is left for the data (electricity, gas, standing charge, VAT) and for status. */
+:root{
+  --bg:#ededeb;
+  --panel:#ffffff;
+  --panel2:#f6f6f4;
+  --ink:#1b1b19;
+  --muted:#686863;
+  --faint:#8f8f89;
+  --line:#dcdcd8;
+  --line2:#ebebe8;
+  --soft:#eeeeeb;
+  --accent:#1b1b19;
+  --accent-ink:#ffffff;
+  --accent-soft:rgba(27,27,25,.14);
+  --plan:#3b3b37;
+  --plan-ink:#ffffff;
+  --elec:#d39200;
+  --gas:#2f74d0;
+  --stand:#8a93a6;
+  --vat:#c0628b;
+  --good:#2b8a3e;
+  --warn:#c25e00;
+  --bad:#d0312d;
+  --bar:#f7f7f5;
+  --f-body:system-ui,-apple-system,"Segoe UI","Cantarell","Noto Sans",Roboto,sans-serif;
+  --r:6px; --gap:10px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-palette="light"]){
+  --bg:#121314;--panel:#1c1d20;--panel2:#222327;--ink:#e8e8e6;--muted:#a2a2a0;--faint:#7c7c7a;--line:#2e3034;--line2:#26282b;--soft:#2a2c30;
+  --accent:#e8e8e6;--accent-ink:#121314;--accent-soft:rgba(232,232,230,.18);--plan:#d4d4d1;--plan-ink:#121314;
+  --elec:#c28400;--gas:#4a86e0;--stand:#7d8698;--vat:#c8709a;--good:#51b866;--warn:#e8913a;--bad:#ef6461;--bar:#18191b;color-scheme:dark}}
+:root[data-palette="dark"]{
+  --bg:#121314;--panel:#1c1d20;--panel2:#222327;--ink:#e8e8e6;--muted:#a2a2a0;--faint:#7c7c7a;--line:#2e3034;--line2:#26282b;--soft:#2a2c30;
+  --accent:#e8e8e6;--accent-ink:#121314;--accent-soft:rgba(232,232,230,.18);--plan:#d4d4d1;--plan-ink:#121314;
+  --elec:#c28400;--gas:#4a86e0;--stand:#7d8698;--vat:#c8709a;--good:#51b866;--warn:#e8913a;--bad:#ef6461;--bar:#18191b;color-scheme:dark}
+:root{--good-bg:color-mix(in srgb,var(--good) 13%,transparent);--warn-bg:color-mix(in srgb,var(--warn) 13%,transparent);--bad-bg:color-mix(in srgb,var(--bad) 12%,transparent)}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:13px;line-height:1.4;-webkit-font-smoothing:antialiased;min-height:100vh;font-variant-numeric:tabular-nums;display:flex;flex-direction:column}
+h1,h2,h3{margin:0}
+h2{font-size:13px;font-weight:600}
+.eyebrow{font-size:12px;color:var(--muted);font-weight:500}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.note{font-size:12px;color:var(--muted)}
+a{color:var(--ink);text-decoration-color:var(--faint);text-underline-offset:2px}
+a:hover{text-decoration-color:var(--ink)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--c);margin-right:5px;vertical-align:baseline}
+
+/* toolbar */
+.toolbar{position:sticky;top:0;z-index:5;background:var(--bar);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px 16px;padding:0 12px;min-height:44px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px;white-space:nowrap}
+.logo{width:22px;height:22px;display:block;flex:none}
+.logo svg{width:22px;height:22px;display:block}
+.tabs{display:inline-flex;background:var(--soft);border-radius:7px;padding:2px;gap:2px}
+.tabs button{border:0;background:none;color:var(--muted);font:inherit;font-weight:500;height:26px;padding:0 12px;border-radius:5px;cursor:pointer;white-space:nowrap}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+.tool-end{margin-left:auto;display:flex;align-items:center;gap:8px}
+.theme-pick select{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:2px 6px;height:26px;width:auto;cursor:pointer}
+
+/* status bar */
+.statusbar{position:sticky;bottom:0;z-index:5;margin-top:auto;background:var(--bar);border-top:1px solid var(--line);display:flex;align-items:center;gap:4px 18px;padding:0 12px;min-height:26px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.statusbar .sp{flex:1}
+.save-pill{display:inline-flex;align-items:center;gap:6px}
+.save-pill::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--good)}
+.save-pill[data-bad="1"]{color:var(--bad)}
+.save-pill[data-bad="1"]::before{background:var(--bad)}
+.save-pill[data-busy="1"]::before{background:var(--warn)}
+#wxMod[data-bad="1"]{color:var(--warn)}
+
+.wrap{padding:var(--gap) 12px;display:flex;flex-direction:column;gap:var(--gap);width:100%;max-width:1680px;margin:0 auto}
+.banner{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:7px 12px}
+.banner[data-kind="warn"]{border-color:var(--warn);background:var(--warn-bg)}
+.banner[data-kind="bad"]{border-color:var(--bad);background:var(--bad-bg)}
+.banner .btn{margin-left:8px;vertical-align:middle}
+
+/* dropdowns: drawn here instead of by GTK. The real <select> stays hidden and holds the value. */
+.dd-btn{font:inherit;font-size:13px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:5px;height:30px;padding:0 28px 0 8px;width:100%;min-width:0;text-align:left;cursor:pointer;position:relative;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dd-btn::after{content:"";position:absolute;right:10px;top:50%;width:6px;height:6px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:translateY(-70%) rotate(45deg)}
+.dd-btn:hover{border-color:color-mix(in srgb,var(--ink) 30%,var(--line))}
+.dd-btn:focus-visible,.dd-btn[aria-expanded="true"]{outline:none;border-color:var(--ink);box-shadow:0 0 0 2px var(--accent-soft)}
+.theme-pick .dd-btn{height:26px;width:auto;min-width:130px}
+.dd-menu{position:fixed;z-index:50;margin:0;padding:3px;list-style:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,.16);max-height:280px;overflow-y:auto;outline:none;font-size:13px;color:var(--ink)}
+.dd-menu li{display:flex;align-items:center;gap:8px;padding:0 10px 0 6px;height:28px;border-radius:4px;cursor:pointer;white-space:nowrap}
+.dd-menu li::before{content:"";flex:none;width:12px;text-align:center;font-size:12px;line-height:1}
+.dd-menu li[aria-selected="true"]::before{content:"✓"}
+.dd-menu li[aria-selected="true"]{font-weight:600}
+.dd-menu li.active{background:var(--soft)}
+
+/* date fields: a text box (dd/mm/yyyy) and a calendar drawn here; the real <input type="date"> stays hidden */
+.dp{position:relative;display:block}
+.dp-text{padding-right:32px}
+.dp-text[aria-invalid="true"]{border-color:var(--bad)}
+.dp-btn{position:absolute;right:1px;top:1px;bottom:1px;width:28px;border:0;background:none;color:var(--muted);border-radius:0 4px 4px 0;cursor:pointer;display:grid;place-items:center;padding:0}
+.dp-btn:hover,.dp-btn[aria-expanded="true"]{color:var(--ink);background:var(--soft)}
+.dp-pop{position:fixed;z-index:50;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,.16);padding:8px;width:244px;color:var(--ink);font-size:13px}
+.dp-head{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px}
+.dp-ttl{font-weight:600}
+.dp-nav{width:26px;height:26px;border:0;background:none;border-radius:4px;cursor:pointer;color:var(--ink);font:inherit;font-size:16px;line-height:1;padding:0}
+.dp-nav:hover{background:var(--soft)}
+table.dp-grid{width:100%;border-collapse:collapse;font-size:12.5px}
+table.dp-grid th,table.dp-grid td{padding:1px!important;border:0;background:none!important;text-align:center}
+table.dp-grid th{font-size:11px;font-weight:500;color:var(--muted);height:22px}
+.dp-day{width:100%;height:28px;border:0;background:none;border-radius:4px;font:inherit;color:var(--ink);cursor:pointer;padding:0}
+.dp-day.out{color:var(--faint)}
+.dp-day:hover{background:var(--soft)}
+.dp-day.today{box-shadow:inset 0 0 0 1px var(--muted)}
+.dp-day[aria-pressed="true"]{background:var(--ink);color:var(--panel);font-weight:600}
+.dp-day:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.dp-foot{display:flex;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid var(--line2)}
+
+/* number fields: GTK spin buttons hidden, steppers drawn here */
+input[type="number"]{appearance:textfield;-moz-appearance:textfield}
+input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.unit>.spin{position:absolute;right:1px;top:1px;bottom:1px;width:20px;display:flex;flex-direction:column;border-left:1px solid var(--line2);pointer-events:auto;font-size:0}
+.spin button{flex:1;border:0;background:none;color:var(--muted);cursor:pointer;padding:0;display:grid;place-items:center}
+.spin button:first-child{border-radius:0 4px 0 0}
+.spin button:last-child{border-radius:0 0 4px 0;border-top:1px solid var(--line2)}
+.spin button:hover{background:var(--soft);color:var(--ink)}
+.unit.has-spin input{padding-right:26px!important}
+.unit.has-spin>span:not(.pre):not(.spin){right:28px}
+.unit.has-spin:has(>span:not(.pre):not(.spin):not([hidden])) input{padding-right:72px!important}
+
+/* panels */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);display:flex;flex-direction:column;min-width:0}
+.card>*{padding-left:12px;padding-right:12px}
+.card>:first-child{padding-top:9px}
+.card>:last-child{padding-bottom:11px}
+.card>*+*{margin-top:9px}
+.card>p{margin-bottom:0}
+.card-head{display:flex;justify-content:space-between;align-items:center;gap:6px 12px;flex-wrap:wrap;min-height:26px}
+.card>.card-head:first-child,.card>h2:first-child{padding-bottom:8px;border-bottom:1px solid var(--line2)}
+.card>.section-title:first-child{padding-bottom:9px;border-bottom:1px solid var(--line2)}
+.col{display:flex;flex-direction:column;gap:var(--gap);min-width:0}
+.panel{display:flex;flex-direction:column;gap:var(--gap)}
+
+/* figures strip */
+.hero{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,4fr);gap:var(--gap)}
+.hero-card{padding:10px 12px;gap:6px}
+.hero-card>*{padding:0!important;margin:0!important}
+.hero-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
+.hero-copy h2{font-size:12px;font-weight:500;color:var(--muted);border:0!important;padding:0!important}
+.big{font-size:26px;font-weight:650;line-height:1.15;letter-spacing:-.015em}
+#projVsCap{font-size:12px;color:var(--muted);line-height:1.45}
+#projVsCap strong{color:var(--ink);font-weight:600}
+.meter{display:flex;flex-direction:column;gap:3px;margin-top:4px!important}
+.meter-track{position:relative;height:6px;border-radius:3px;background:var(--soft)}
+.meter-fill{position:absolute;inset:0 auto 0 0;width:0;border-radius:3px;background:var(--ink)}
+@media (prefers-reduced-motion:no-preference){.meter-fill{transition:width .5s ease,background-color .3s}}
+.meter-fill[data-s="good"]{background:var(--good)}.meter-fill[data-s="warn"]{background:var(--warn)}.meter-fill[data-s="bad"]{background:var(--bad)}
+.meter-cap{position:absolute;left:80%;top:-3px;bottom:-3px;width:2px;background:var(--ink);border-radius:1px}
+.meter-scale{position:relative;height:14px;font-size:11px;color:var(--muted)}
+.meter-scale span{position:absolute;top:0}
+.meter-scale .z{left:0}.meter-scale .c{left:80%;transform:translateX(-50%);color:var(--ink);font-weight:500;white-space:nowrap}.meter-scale .m{right:0}
+.meter-read{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px}
+.meter-read #gaugePct{font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted)}
+.chip::before{content:"i";flex:none;width:15px;height:15px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:700;background:var(--muted);color:var(--panel)}
+.chip[data-s="good"]{color:var(--good)}.chip[data-s="good"]::before{content:"✓";background:var(--good)}
+.chip[data-s="warn"]{color:var(--warn)}.chip[data-s="warn"]::before{content:"!";background:var(--warn)}
+.chip[data-s="bad"]{color:var(--bad)}.chip[data-s="bad"]::before{content:"!";background:var(--bad)}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.tile{padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.tile+.tile{border-left:1px solid var(--line2)}
+.tile .val{font-size:20px;font-weight:600;white-space:nowrap;line-height:1.3;letter-spacing:-.01em}
+.tile .val small{font-size:12px;color:var(--muted);font-weight:400;letter-spacing:0}
+.tile .note{min-width:0;line-height:1.4}
+.rng{font-size:11px;color:var(--muted);font-weight:400}
+
+/* main grid */
+.dash{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:var(--gap);align-items:start}
+
+/* daily targets */
+table.tgt td,table.tgt th{padding:5px 6px}
+table.tgt tr.today td{background:var(--panel2);font-weight:600}
+table.tgt tr.today td:first-child{box-shadow:inset 2px 0 0 var(--ink)}
+table.tgt td b{font-weight:600}
+
+/* forms */
+label{display:flex;flex-direction:column;gap:3px;font-size:12px;font-weight:500;color:var(--muted);min-width:0}
+input,select{font:inherit;font-size:13px;font-weight:400;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:5px 8px;height:30px;width:100%;min-width:0}
+input:hover,select:hover{border-color:color-mix(in srgb,var(--ink) 30%,var(--line))}
+input:focus,select:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 2px var(--accent-soft)}
+button:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+input[type="checkbox"]{width:15px;height:15px;padding:0;accent-color:var(--ink);flex:none}
+.row{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
+.unit{display:flex;align-items:center;position:relative}
+.unit input{padding-right:46px}
+.unit>span{position:absolute;right:8px;font-size:12px;color:var(--muted);white-space:nowrap;pointer-events:none}
+.unit>span.pre{position:static;margin-right:6px;font-size:13px;color:var(--ink)}
+.unit:has(.pre:not([hidden])) input{padding-right:8px}
+.fico{display:inline-flex;align-items:center;gap:5px}
+.fico svg{width:11px;height:11px;color:var(--c)}
+.seg{display:inline-flex;background:var(--soft);border-radius:6px;padding:2px;gap:2px}
+.seg button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:500;padding:2px 9px;height:22px;border-radius:4px;cursor:pointer}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+.btn{font:inherit;font-weight:600;font-size:13px;border-radius:5px;padding:0 14px;height:30px;cursor:pointer;border:1px solid transparent;background:var(--accent);color:var(--accent-ink);display:inline-flex;align-items:center;justify-content:center}
+.btn:hover{opacity:.88}
+.btn:disabled{opacity:.35;cursor:default}
+.btn.ghost{background:var(--panel);color:var(--ink);border-color:var(--line);font-weight:500}
+.btn.ghost:hover:not(:disabled){background:var(--soft);opacity:1}
+.btn.small{padding:0 9px;height:24px;font-size:12px}
+.btn.danger{background:var(--bad);color:#fff}
+.actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.msg{font-size:12px;font-weight:500}
+.msg[data-kind="err"]{color:var(--bad)}
+.msg[data-kind="ok"]{color:var(--good)}
+label.check{flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:13px;font-weight:400}
+.optbox{background:var(--panel2);border:1px solid var(--line2);border-radius:5px;padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+
+/* tables */
+.tbl-wrap{overflow-x:auto;padding-left:0!important;padding-right:0!important}
+.tbl-wrap>p{padding:6px 12px 0}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-size:11.5px;color:var(--muted);font-weight:500;padding:5px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid var(--line2);white-space:nowrap}
+th:first-child,td:first-child{padding-left:12px}
+th:last-child,td:last-child{padding-right:12px}
+tbody tr:hover td{background:var(--panel2)}
+tfoot td{border-bottom:0;border-top:1px solid var(--line);font-weight:600}
+td.r,th.r{text-align:right}
+tr.over td:last-child{color:var(--bad);font-weight:600}
+tr.now td{background:var(--panel2)}
+tr.now td:first-child{box-shadow:inset 2px 0 0 var(--ink)}
+.tag{font-size:11px;font-weight:500;padding:0 6px;border-radius:3px;background:var(--soft);color:var(--muted);white-space:nowrap;line-height:17px;display:inline-block}
+.tag[data-k="logged"]{background:var(--good-bg);color:var(--good)}
+.tag[data-k="partial"]{background:var(--warn-bg);color:var(--warn)}
+
+/* chart */
+.legend{display:flex;gap:3px 12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
+.chart svg{width:100%;height:auto;display:block;overflow:visible}
+.chart text{fill:var(--muted);font-family:var(--f-body);font-size:11px}
+.chart .hit{cursor:pointer;fill:transparent;outline:none}
+.chart .hit:hover,.chart .hit:focus-visible{fill:color-mix(in srgb,var(--ink) 6%,transparent)}
+.chart .hit:focus-visible{stroke:var(--ink);stroke-width:1.5}
+.chart .day:hover rect{opacity:.85}
+.chart .run{margin-top:10px;padding-top:8px;border-top:1px solid var(--line2)}
+.chart .run-h{font-size:12px;color:var(--muted);margin:0 0 2px}
+.chart-nav{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.chart-nav .ttl{font-weight:600;min-width:6.5em;text-align:center}
+.chart-nav .sp{flex:1}
+.month-sum{font-size:12.5px;line-height:1.5;margin:0;color:var(--ink)}
+.month-sum strong{font-weight:600}
+.legend .lg-dot{width:7px;height:7px;border-radius:50%;background:var(--good)}
+.legend .lg-per{width:16px;height:4px;border-radius:2px;background:var(--ink);opacity:.5}
+.legend .lg-hatch{background:repeating-linear-gradient(45deg,var(--muted) 0 2px,transparent 2px 5px)}
+.legend .lg-line{background:none;border-top:2px dashed var(--plan);height:0;border-radius:0;width:14px}
+#monthsTbl tbody tr{cursor:pointer}
+#chartNote{font-size:11.5px;line-height:1.45}
+
+/* tariff card */
+table.tf td,table.tf th{padding-top:5px;padding-bottom:5px}
+table.tf tbody tr:hover td{background:none}
+.tf-fuel{font-weight:500;display:inline-flex;align-items:center;gap:6px}
+.tf-fuel::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c)}
+
+/* where the money goes: one row per item */
+.split{display:flex;flex-direction:column;padding-left:0!important;padding-right:0!important}
+.fuel{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:0 10px;padding:5px 12px;border-bottom:1px solid var(--line2)}
+.fuel:last-child{border-bottom:0}
+.fuel .eyebrow{color:var(--ink);font-size:12.5px;display:inline-flex;align-items:center;gap:6px}
+.fuel .eyebrow::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c,var(--stand))}
+.fuel .mid{font-size:13px;font-weight:600;text-align:right}
+.fuel .note{grid-column:1/-1;font-size:11.5px;padding-left:14px}
+
+/* settings */
+.tariff-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;align-items:end;padding:10px;border:1px solid var(--line2);border-radius:5px;background:var(--panel2)}
+.tariff-row .from{grid-column:1/4}
+.tariff-row button{grid-column:4;grid-row:1;justify-self:end;margin-bottom:3px}
+.settings-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--gap);align-items:start}
+.section-title{display:flex;flex-direction:column;gap:2px}
+.section-title h2{font-size:13px}
+
+/* start-up, first run and past terms */
+body.loading .wrap>:not(#boot),body.fatal .wrap>:not(#boot),body.loading .tabs,body.fatal .tabs{display:none!important}
+body:not(.loading):not(.fatal) #boot{display:none}
+#boot{max-width:520px;margin:12vh auto 0;width:100%}
+#boot .spinner{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--ink);border-radius:50%;display:inline-block;vertical-align:-2px;margin-right:8px}
+@media (prefers-reduced-motion:no-preference){#boot .spinner{animation:spin .8s linear infinite}}
+@keyframes spin{to{transform:rotate(360deg)}}
+body.fatal #boot .spinner{display:none}
+#bootErr{white-space:pre-wrap;overflow-wrap:anywhere}
+body.setup .tabs,body.setup #termsCard,body.setup .not-setup{display:none!important}
+body:not(.setup) #setupIntro{display:none}
+body.readonly #logCard,body.readonly #tgtCard,body.readonly .ro-hide{display:none!important}
+.confirm-box{background:var(--panel2);border:1px solid var(--line2);border-radius:5px;padding:8px 10px;display:flex;flex-direction:column;gap:8px}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;font-size:12.5px}
+.kv dt{color:var(--muted)}.kv dd{margin:0;overflow-wrap:anywhere}
+.empty{padding:20px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:var(--r)}
+
+@media (max-width:1180px){.hero{grid-template-columns:1fr}}
+@media (max-width:1000px){.dash{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.tile:nth-child(3){border-left:0}.tile:nth-child(n+3){border-top:1px solid var(--line2)}
+  .settings-grid{grid-template-columns:1fr}.tool-end{margin-left:0}}
+@media (max-width:480px){.tiles{grid-template-columns:1fr}.tile+.tile{border-left:0;border-top:1px solid var(--line2)}
+  .tariff-row{grid-template-columns:1fr 1fr}.tariff-row .from{grid-column:1/2}.tariff-row button{grid-column:2}}
+</style>
+</head>
+<body class="loading">
+
+<header class="toolbar">
+  <div class="brand"><span class="logo"><svg viewBox="8 8 112 112" aria-hidden="true"><rect x="8" y="8" width="112" height="112" rx="26" fill="#1f2023"/><rect x="9" y="9" width="110" height="110" rx="25" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="2"/><path d="M39.96 92.04A34 34 0 1 1 88.04 92.04" fill="none" stroke="#4a4c52" stroke-width="11" stroke-linecap="round"/><path d="M39.96 92.04A34 34 0 0 1 52.37 36.05" fill="none" stroke="#e5a00d" stroke-width="11" stroke-linecap="round"/><path d="M59.27 34.33A34 34 0 0 1 93.44 51.00" fill="none" stroke="#2f74d0" stroke-width="11" stroke-linecap="round"/><path d="M65 18H79L69 52H89L55 110L61 72H39Z" fill="#fff" transform="translate(64 68) scale(0.4) translate(-64 -64)"/></svg></span>House Energy</div>
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button type="button" role="tab" id="tab-overview" data-tab="overview" aria-selected="true">Overview</button>
+    <button type="button" role="tab" id="tab-entries" data-tab="entries" aria-selected="false">Usage history</button>
+    <button type="button" role="tab" id="tab-settings" data-tab="settings" aria-selected="false">Tariff &amp; cap</button>
+  </nav>
+  <div class="tool-end">
+    <label class="theme-pick" title="Colour theme" style="flex-direction:row;align-items:center;gap:6px">Theme <select id="themeSel" aria-label="Colour theme">
+      <option value="auto">Match system</option><option value="light">Light</option><option value="dark">Dark</option>
+    </select></label>
+  </div>
+</header>
+
+<div class="wrap">
+  <section class="card" id="boot" aria-live="polite">
+    <h2 id="bootH"><span class="spinner" aria-hidden="true"></span>Loading your data…</h2>
+    <p class="note" id="bootErr"></p>
+    <div class="actions" id="bootActs" hidden><button type="button" class="btn" id="bootRetry">Try again</button></div>
+  </section>
+  <div class="banner" id="alert" data-kind="bad" role="alert" hidden></div>
+  <div class="banner" id="banner" hidden></div>
+
+  <!-- OVERVIEW -->
+  <div class="panel" data-panel="overview" role="tabpanel" aria-labelledby="tab-overview">
+    <section class="hero" aria-label="Forecast against cap">
+      <div class="card hero-card">
+        <div class="hero-copy">
+          <h2>Projected bill for the term</h2>
+          <span class="big num" id="projTotal">—</span>
+          <span id="projVsCap"></span>
+        </div>
+        <div class="meter" aria-hidden="true">
+          <div class="meter-track"><div class="meter-fill" id="meterFill"></div><div class="meter-cap"></div></div>
+          <div class="meter-scale"><span class="z">£0</span><span class="c" id="meterCapLbl">Cap</span><span class="m">125%</span></div>
+        </div>
+        <div class="meter-read"><span class="chip" id="statusChip" role="status">Waiting for data</span><span><span class="num" id="gaugePct">—</span> of the cap</span></div>
+      </div>
+      <div class="tiles">
+        <div class="tile"><span class="eyebrow" id="monthLbl">This month</span><span class="val" id="monthVal">—</span><span class="note" id="monthNote"></span></div>
+        <div class="tile"><span class="eyebrow" id="budgetLbl">Heating headroom</span><span class="val" id="budget">—</span><span class="note" id="budgetNote"></span></div>
+        <div class="tile"><span class="eyebrow">Spent so far</span><span class="val" id="spent">—</span><span class="note" id="spentNote"></span></div>
+        <div class="tile"><span class="eyebrow">Last 7 days</span><span class="val" id="recent">—</span><span class="note" id="recentNote"></span></div>
+      </div>
+    </section>
+
+    <div class="dash">
+      <div class="col">
+        <section class="card" aria-labelledby="chartH">
+          <div class="card-head">
+            <h2 id="chartH">Usage by month</h2>
+            <div class="actions">
+              <div class="seg" role="group" aria-label="Fuel"><button type="button" data-fuel="all" aria-pressed="true">Both</button><button type="button" data-fuel="e" aria-pressed="false">Electricity</button><button type="button" data-fuel="g" aria-pressed="false">Gas</button></div>
+              <div class="seg" role="group" aria-label="Units"><button type="button" data-unit="gbp" aria-pressed="true">£</button><button type="button" data-unit="kwh" aria-pressed="false">kWh</button></div>
+            </div>
+          </div>
+          <div class="legend">
+            <span id="legElec"><i style="background:var(--elec)"></i>Electricity</span>
+            <span id="legGas"><i style="background:var(--gas)"></i>Gas</span>
+            <span id="legStand"><i style="background:var(--stand)"></i>Standing charge</span>
+            <span id="vatLegend"><i style="background:var(--vat)"></i>VAT</span>
+            <span id="legMonth"><i class="lg-line"></i>Allowance</span>
+            <span class="legDay" hidden><i class="lg-dot"></i>Day logged</span>
+            <span class="legDay" hidden><i class="lg-per"></i>Period log, split evenly</span>
+            <span class="legDay" hidden><i class="lg-hatch"></i>Estimate / forecast</span>
+            <span class="legDay" id="legTarget" hidden><i class="lg-line"></i>Daily target</span>
+          </div>
+          <div class="chart-nav" id="chartNav" hidden>
+            <button type="button" class="btn ghost small" data-nav="back">← All months</button>
+            <span class="sp"></span>
+            <button type="button" class="btn ghost small" data-nav="prev" aria-label="Previous month">‹</button>
+            <span class="ttl" id="chartNavTtl"></span>
+            <button type="button" class="btn ghost small" data-nav="next" aria-label="Next month">›</button>
+          </div>
+          <p class="month-sum" id="monthSum" hidden></p>
+          <div class="chart" id="chart"></div>
+          <p class="note" id="chartNote" style="margin-bottom:0"></p>
+        </section>
+
+        <section class="card" aria-labelledby="monthsH">
+          <div class="card-head"><h2 id="monthsH">Billing months</h2><span class="note" id="monthsNote">Calendar months. Click a row for its days.</span></div>
+          <div class="tbl-wrap"><table id="monthsTbl"></table></div>
+        </section>
+      </div>
+
+      <div class="col">
+        <section class="card" aria-labelledby="tgtH" id="tgtCard" hidden>
+          <div class="card-head"><h2 id="tgtH">Daily targets</h2><span class="note">kWh per day</span></div>
+          <div class="tbl-wrap" id="tgtDays"></div>
+          <p class="note" id="tgtNote" style="margin-bottom:0"></p>
+        </section>
+
+        <section class="card" aria-labelledby="addH" id="logCard">
+          <div class="card-head">
+            <h2 id="addH">Add usage</h2>
+            <div class="actions">
+              <div class="seg" role="group" aria-label="Entry type">
+                <button type="button" id="modeDay" aria-pressed="true">Day</button>
+                <button type="button" id="modePeriod" aria-pressed="false">Period</button>
+                <button type="button" id="modeRead" aria-pressed="false">Reading</button>
+              </div>
+              <div class="seg" role="group" aria-label="Enter amounts in" id="inSeg">
+                <button type="button" id="inKwh" aria-pressed="true">kWh</button>
+                <button type="button" id="inGbp" aria-pressed="false">£</button>
+              </div>
+            </div>
+          </div>
+          <form id="entryForm" novalidate>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div class="row" id="dayRow"><label>Date<input type="date" id="fDate"></label></div>
+              <div class="row" id="readRow" hidden><label>Reading taken on<input type="date" id="fRDate"></label></div>
+              <div class="row" id="periodRow" hidden>
+                <label>From<input type="date" id="fFrom"></label>
+                <label>To (inclusive)<input type="date" id="fTo"></label>
+              </div>
+              <div class="row">
+                <label><span class="fico" style="--c:var(--elec)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 2 5 13.2h6.1L10 22l9-11.6h-6.2L13.5 2Z"/></svg>Electricity</span><span class="unit"><span class="pre" id="elecPre" hidden>£</span><input type="number" id="fElec" min="0" step="0.01" inputmode="decimal" placeholder="0.0"><span id="elecUnitLbl">kWh</span></span></label>
+                <label><span class="fico" style="--c:var(--gas)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 3.5-1.6 5.3-3 7.4C7.7 11.3 7 12.9 7 14.6 7 18.7 9.4 22 12 22s5-3 5-7.2c0-2.2-.9-4-2-5.4.2 1.8-.5 3-1.6 3.3.6-3.9-.4-7.9-1.4-10.7Z"/></svg>Gas</span><span class="unit"><span class="pre" id="gasPre" hidden>£</span><input type="number" id="fGas" min="0" step="0.001" inputmode="decimal" placeholder="0.0"><span id="gasUnitLbl">kWh</span></span></label>
+              </div>
+              <div id="gbpOpts" class="optbox" hidden>
+                <label class="check"><input type="checkbox" id="fInclVat"> Amounts include VAT</label>
+                <label class="check"><input type="checkbox" id="fInclStand"> Amounts include the standing charge</label>
+                <p class="note" style="margin:0">A bill total includes both. Smart meter or app figures usually don’t include VAT. The tracker works out the kWh from your tariff.</p>
+              </div>
+              <p class="note" id="periodHint" hidden style="margin:0">Use a period for back-filling, e.g. a whole bill. The usage is spread evenly across those days.</p>
+              <p class="note" id="readHint" hidden style="margin:0"></p>
+              <div class="actions">
+                <button class="btn" type="submit" id="saveEntry">Add entry</button>
+                <button class="btn ghost" type="button" id="cancelEdit" hidden>Cancel edit</button>
+                <span class="msg" id="entryMsg" role="status"></span>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <section class="card" aria-labelledby="fuelH">
+          <h2 id="fuelH">Where the money goes</h2>
+          <div class="split" id="fuelSplit"></div>
+        </section>
+
+        <section class="card" aria-labelledby="tariffH" id="tariffCard">
+          <div class="card-head"><h2 id="tariffH">Your tariff</h2><a href="#" data-goto="settings">Change</a></div>
+          <div id="tariffBox" class="tbl-wrap"></div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- ENTRIES -->
+  <div class="panel" data-panel="entries" role="tabpanel" aria-labelledby="tab-entries" hidden>
+    <section class="card" aria-labelledby="logH">
+      <div class="card-head"><h2 id="logH">Every entry</h2><span class="note" id="coverage"></span></div>
+      <div id="entriesBox" class="tbl-wrap"></div>
+    </section>
+    <section class="card" aria-labelledby="readH">
+      <div class="card-head"><h2 id="readH">Meter readings</h2><span class="note">Each reading adds the usage since the one before it.</span></div>
+      <div id="readingsBox" class="tbl-wrap"></div>
+    </section>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="panel" data-panel="settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
+    <section class="card" id="setupIntro" aria-labelledby="setupH">
+      <div class="section-title"><h2 id="setupH">Set up your tracker</h2><span class="note">Enter the details from your tenancy and your energy bill. You can change any of them later under Tariff &amp; cap.</span></div>
+      <p class="note">Moving from another computer? Restore a backup under “Your data” below instead.</p>
+    </section>
+    <form id="settingsForm" novalidate class="panel">
+      <div class="settings-grid">
+        <section class="card">
+          <div class="section-title"><h2>Term &amp; cap</h2><span class="note">The period your capped bill covers.</span></div>
+          <div class="row">
+            <label>Term starts<input type="date" id="sStart"></label>
+            <label>Term ends<input type="date" id="sEnd"></label>
+          </div>
+          <div class="row">
+            <label>Cap amount<span class="unit"><span class="pre">£</span><input type="number" id="sCap" min="0" step="0.01"></span></label>
+            <label>Cap applies<select id="sCapPeriod"><option value="month">Per month, unused allowance carries over</option><option value="monthEach">Per month, each month separate</option><option value="term">For the whole term</option></select></label>
+          </div>
+          <div class="row">
+            <label>VAT rate<span class="unit"><input type="number" id="sVat" min="0" max="30" step="0.1"><span>%</span></span></label>
+            <label class="check" style="align-self:end;padding-bottom:7px"><input type="checkbox" id="sCapVat"> Cap includes VAT</label>
+          </div>
+          <p class="note" style="margin-bottom:0">Part months (the first and last of the term) get a share of the monthly cap by days.</p>
+        </section>
+        <section class="card">
+          <div class="section-title"><h2>Gas &amp; forecast</h2><span class="note">How gas readings are converted and how the rest of the term is projected.</span></div>
+          <div class="row">
+            <label>Gas meter reads in<select id="sGasUnit"><option value="kWh">kWh (already converted)</option><option value="m3">Cubic metres (m³)</option><option value="ft3">Hundreds of cubic feet (ft³)</option></select></label>
+            <label>Calorific value<span class="unit"><input type="number" id="sCV" step="0.1" min="30" max="45"><span>MJ/m³</span></span></label>
+          </div>
+          <label>Town or city (for the weather)<input type="text" id="sPlace" placeholder="e.g. Sheffield" autocomplete="off"></label>
+          <label class="check"><input type="checkbox" id="sSeasonal"> Use the weather in the forecast (heating rises when it’s cold)</label>
+          <p class="note" id="weatherNote" style="margin-bottom:0"></p>
+        </section>
+      </div>
+      <section class="card">
+        <div class="card-head">
+          <div class="section-title"><h2>Tariffs</h2><span class="note">Exactly as on your bill, before VAT. Add a row whenever the rates change; each applies from its date onwards.</span></div>
+          <button type="button" class="btn ghost small" id="addTariff">Add rate change</button>
+        </div>
+        <div id="tariffRows" style="display:flex;flex-direction:column;gap:8px"></div>
+      </section>
+      <div class="actions">
+        <button class="btn" type="submit" id="saveSettings">Save settings</button>
+        <span class="msg" id="settingsMsg" role="status"></span>
+      </div>
+    </form>
+    <div class="settings-grid">
+      <section class="card" id="termsCard" aria-labelledby="termsH">
+        <div class="section-title"><h2 id="termsH">Terms</h2><span class="note">When a tenancy ends, start a new term. Past terms are kept and can be viewed at any time.</span></div>
+        <div id="termsBox" class="tbl-wrap"></div>
+        <div class="actions"><button type="button" class="btn ghost small" id="newTermBtn">Start a new term</button></div>
+        <div class="confirm-box" id="newTermBox" hidden>
+          <div class="row">
+            <label>New term starts<input type="date" id="ntStart"></label>
+            <label>New term ends<input type="date" id="ntEnd"></label>
+          </div>
+          <p class="note" style="margin:0">The cap, tariff and other settings carry over, and you can change them afterwards. The current term’s entries move to the past terms list. Your latest meter readings are kept, so the next reading carries on from them.</p>
+          <div class="actions"><button type="button" class="btn" id="ntGo">Start new term</button><button type="button" class="btn ghost" id="ntCancel">Cancel</button><span class="msg" id="ntMsg" role="status"></span></div>
+        </div>
+      </section>
+      <section class="card" id="dataCard" aria-labelledby="dataH">
+        <div class="section-title"><h2 id="dataH">Your data</h2><span class="note">Saved automatically on this computer. Nothing is sent anywhere except the town name, to get the weather.</span></div>
+        <dl class="kv"><dt>Data file</dt><dd><span id="dataPath" class="num">—</span> <a href="#" id="revealData">Show in folder</a></dd></dl>
+        <div class="actions not-setup">
+          <button type="button" class="btn ghost small" id="exportCsv">Export usage (CSV)</button>
+          <button type="button" class="btn ghost small" id="exportJson">Export a full backup (JSON)</button>
+        </div>
+        <div class="actions">
+          <label class="btn ghost small" style="flex-direction:row;color:var(--ink)">Import a backup or CSV…<input type="file" id="importFile" accept=".json,.csv,application/json,text/csv" hidden></label>
+        </div>
+        <div class="confirm-box" id="importBox" hidden>
+          <p id="importQ" style="margin:0"></p>
+          <div class="actions"><button type="button" class="btn danger" id="importGo">Replace my data</button><button type="button" class="btn ghost" id="importCancel">Cancel</button></div>
+        </div>
+        <p class="msg" id="dataMsg" role="status" style="margin-bottom:0"></p>
+        <p class="note" style="margin-bottom:0">A CSV import adds the rows to this term and skips any you already have. It needs the columns from, to, electricity_kwh and gas_kwh (dates as yyyy-mm-dd or dd/mm/yyyy), the same as an export.</p>
+      </section>
+    </div>
+  </div>
+</div>
+
+<footer class="statusbar">
+  <span id="termLine"></span>
+  <span id="clockLine"></span>
+  <span class="sp"></span>
+  <span id="wxMod" hidden></span>
+  <span class="save-pill" id="appStatus" hidden></span>
+</footer>
+
+<script>
+(function(){
+const DAY=86400000;
+const toD=s=>{const [y,m,d]=s.split('-').map(Number);return Date.UTC(y,m-1,d)};
+const toS=t=>new Date(t).toISOString().slice(0,10);
+const now=new Date();
+const TODAY=toS(Date.UTC(now.getFullYear(),now.getMonth(),now.getDate()));
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const fmtDate=s=>{const d=new Date(toD(s));return d.getUTCDate()+' '+MON[d.getUTCMonth()]};
+const fmtDateY=s=>{const d=new Date(toD(s));return d.getUTCDate()+' '+MON[d.getUTCMonth()]+' '+d.getUTCFullYear()};
+const gbp=v=>(v<0?'−£':'£')+Math.abs(v).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});
+const gbp0=v=>'£'+Math.round(v).toLocaleString('en-GB');
+const kwh=v=>(Math.round(v*10)/10).toLocaleString('en-GB',{maximumFractionDigits:1});
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const dim=(y,m)=>new Date(Date.UTC(y,m+1,0)).getUTCDate();
+
+function addMonths(s,k){const d=new Date(toD(s));const y=d.getUTCFullYear(),m=d.getUTCMonth()+k,day=d.getUTCDate();
+  const yy=y+Math.floor(m/12),mm=((m%12)+12)%12;return toS(Date.UTC(yy,mm,Math.min(day,dim(yy,mm))))}
+
+// Gas volume → kWh: volume × 1.02264 (correction) × CV ÷ 3.6
+function gasToKwh(v,unit,cv){if(unit==='m3')return v*1.02264*cv/3.6;if(unit==='ft3')return v*2.83*1.02264*cv/3.6;return v}
+
+const vatOf=S=>(S.vatRate==null||S.vatRate==='')?5:+S.vatRate;
+
+// The current term's settings, entries and meter readings, plus past terms (archive). viewTerm is -1 for the
+// current term, or the index of a past term being looked at (read-only).
+let settingsDoc=null, entries=[], readings=[], archive=[], viewTerm=-1, dataPath='', mode='day', editingId=null, gasInputUnit='kWh', inMode='kwh';
+function current(){const a=viewTerm>=0?archive[viewTerm]:null;
+  if(a)return {S:a.settings,E:a.entries||[],R:a.readings||[],ro:true};
+  return {S:settingsDoc,E:entries,R:readings,ro:false}}
+
+function tariffFor(S,s){const ts=[...(S.tariffs||[])].filter(t=>t.from).sort((a,b)=>a.from<b.from?-1:1);if(!ts.length)return {eRate:0,eStand:0,gRate:0,gStand:0};let pick=ts[0];for(const t of ts){if(t.from<=s)pick=t}return pick}
+
+// ---------- forecast model ----------
+// Daily use = base + heating × heating degree days (HDD, base 15.5°C), fitted to your own entries.
+// Base covers hot water, cooking, appliances; the heating part grows as the weather gets colder.
+// Until you've logged some cold weather, the heating part leans on a typical UK home's ratio (PRIOR_R).
+// Typical heating degree days per calendar month. The app works these out for your town from the last five
+// years of weather; until it has (or with no town set), a UK average is used.
+const UK_HDD=[330,290,270,200,130,60,25,25,65,150,240,305];
+const HDD_BASE=15.5;
+const PRIOR_R={e:0.04,g:0.55};            // heating sensitivity as a share of base use, per HDD
+const WEATHER_U={actual:0,forecast:0.06,typical:0.15}; // extra spread from not knowing the weather
+let weather=null;
+const placeOf=S=>String((S&&S.weatherPlace)||'').trim();
+const typicalHdd=()=>weather&&Array.isArray(weather.typical)&&weather.typical.length===12?weather.typical:UK_HDD;
+const typicalLabel=()=>weather&&Array.isArray(weather.typical)?`typical weather for ${esc(String(weather.place||'your area').split(',')[0])}`:'typical UK weather';
+function hddOn(s){const T=weather&&weather.temps;if(T&&T[s]!=null)return {h:Math.max(0,HDD_BASE-T[s]),src:s<=TODAY?'actual':'forecast'};
+  const d=new Date(toD(s));return {h:typicalHdd()[d.getUTCMonth()]/dim(d.getUTCFullYear(),d.getUTCMonth()),src:'typical'}}
+function fitOnce(obs,r,wt){
+  let Sw=0,Sx=0,Sxx=0,Sy=0,Sxy=0;obs.forEach((o,k)=>{const w=o.w*wt[k];Sw+=w;Sx+=w*o.x;Sxx+=w*o.x*o.x;Sy+=w*o.y;Sxy+=w*o.x*o.y});
+  const xm=Sx/Sw,ym=Sy/Sw;
+  const lam=120; // the prior counts as much as a month of data spread over about ±2°C
+  const A11=Sw+lam*r*r,A12=Sx-lam*r,A22=Sxx+lam,det=A11*A22-A12*A12;
+  let a=(Sy*A22-A12*Sxy)/det,b=(A11*Sxy-A12*Sy)/det;
+  if(!(b>=0)){b=0;a=ym}if(a<0){a=0;b=Sxx?Sxy/Sxx:0}
+  return {a,b,lam,info:Math.max(0,Sxx-Sw*xm*xm),Sw}}
+function fitFuel(obs,r,useW){
+  if(!obs.length)return null;
+  const W=obs.reduce((s,o)=>s+o.w,0);if(!W)return null;
+  if(!useW)return {a:obs.reduce((s,o)=>s+o.w*o.y,0)/W,b:0,u:0,flat:true,n:obs.length};
+  // robust fit: entries that sit far off the line (a one-off spike, a typo) are down-weighted
+  // so a single unusual day can't drag the whole forecast with it
+  let wt=obs.map(()=>1),f=fitOnce(obs,r,wt);
+  for(let it=0;it<4&&obs.length>=4;it++){
+    const res=obs.map(o=>(o.y-f.a-f.b*o.x)/Math.max(0.5,f.a+f.b*o.x)); // relative error
+    const sorted=res.map(Math.abs).sort((p,q)=>p-q),mad=Math.max(0.12,sorted[Math.floor(sorted.length/2)]*1.4826);
+    wt=res.map(e=>Math.min(1,1.5*mad/Math.max(1e-9,Math.abs(e))));f=fitOnce(obs,r,wt)}
+  return {a:f.a,b:f.b,u:Math.min(0.5,Math.max(0.08,0.5*Math.sqrt(f.lam/(f.lam+f.info)))),n:obs.length,info:f.info,Sw:f.Sw,wt}}
+
+function model(S,E){
+  if(!S.termStart||!S.termEnd||S.termEnd<S.termStart)return null;
+  const t0=toD(S.termStart),t1=toD(S.termEnd),n=Math.round((t1-t0)/DAY)+1,tToday=toD(TODAY),useW=S.seasonal!==false;
+  const days=[];
+  for(let i=0;i<n;i++){const t=t0+i*DAY,s=toS(t),w=hddOn(s);days.push({t,s,e:0,g:0,eCov:false,gCov:false,h:w.h,src:w.src,past:t<=tToday})}
+  let outside=0,overlap=0,lastLogged=null;
+  for(const en of E){const a=toD(en.from),b=toD(en.to);const len=Math.round((b-a)/DAY)+1;if(len<1)continue;
+    const pe=en.elec!=null&&en.elec!==''?en.elec/len:null,pg=en.gas!=null&&en.gas!==''?en.gas/len:null;
+    for(let t=a;t<=b;t+=DAY){const i=Math.round((t-t0)/DAY);if(i<0||i>=n){outside++;continue}const d=days[i];
+      if((pe!=null&&d.eCov)||(pg!=null&&d.gCov))overlap++;
+      const per=len>1?{from:en.from,to:en.to}:null;
+      if(pe!=null){d.e+=pe;d.eCov=true;if(per){d.ePer=true;d.per=d.per||per}else d.eDay=true}
+      if(pg!=null){d.g+=pg;d.gCov=true;if(per){d.gPer=true;d.per=d.per||per}else d.gDay=true}}}
+  for(const d of days)if(d.eCov||d.gCov)lastLogged=d.s;
+  if(!lastLogged)return {empty:true,n,days};
+  // one observation per entry: average use per day against average HDD, recent entries count more
+  const tLast=toD(lastLogged),obs={e:[],g:[]};
+  for(const en of E){const fa=toD(en.from),fb=toD(en.to),full=Math.round((fb-fa)/DAY)+1;const a=Math.max(fa,t0),b=Math.min(fb,t1);if(b<a||full<1)continue;
+    const len=Math.round((b-a)/DAY)+1;let hx=0;for(let t=a;t<=b;t+=DAY)hx+=days[Math.round((t-t0)/DAY)].h;hx/=len;
+    const age=Math.max(0,(tLast-(a+b)/2)/DAY),w=len*(age<=14?1:0.35+0.65*Math.exp(-(age-14)/60));
+    if(en.elec!=null&&en.elec!=='')obs.e.push({x:hx,y:en.elec/full,w,len});if(en.gas!=null&&en.gas!=='')obs.g.push({x:hx,y:en.gas/full,w,len})}
+  const fE=fitFuel(obs.e,PRIOR_R.e,useW),fG=fitFuel(obs.g,PRIOR_R.g,useW);
+  const vr=vatOf(S)/100,inclVat=S.capInclVat!==false,bf=inclVat?1+vr:1,BASE_U=0.1;
+  const part=(f,h)=>f?{b:f.a,h:f.b*h}:{b:0,h:0};
+  let tot={e:0,g:0,st:0,ex:0,vat:0,inc:0,cost:0,lo:0,hi:0},spent={cost:0,est:0},unlogged=0,remDays=0,remCost=0;
+  for(const d of days){const T=tariffFor(S,d.s);const pe=part(fE,d.h),pg=part(fG,d.h);
+    const uE=Math.sqrt((fE?fE.u:0)**2+WEATHER_U[d.src]**2),uG=Math.sqrt((fG?fG.u:0)**2+WEATHER_U[d.src]**2);
+    d.eu=d.eCov?d.e:pe.b+pe.h;d.gu=d.gCov?d.g:pg.b+pg.h;
+    d.exp={e:pe.b+pe.h,g:pg.b+pg.h};
+    const eLo=d.eCov?d.e:pe.b*(1-BASE_U)+pe.h*(1-uE),eHi=d.eCov?d.e:pe.b*(1+BASE_U)+pe.h*(1+uE);
+    const gLo=d.gCov?d.g:pg.b*(1-BASE_U)+pg.h*(1-uG),gHi=d.gCov?d.g:pg.b*(1+BASE_U)+pg.h*(1+uG);
+    d.ec=d.eu*T.eRate/100;d.gc=d.gu*T.gRate/100;d.sc=(T.eStand+T.gStand)/100;d.ex=d.ec+d.gc+d.sc;d.vat=d.ex*vr;d.cost=d.ex*bf;
+    d.lo=((eLo*T.eRate+gLo*T.gRate)/100+d.sc)*bf;d.hi=((eHi*T.eRate+gHi*T.gRate)/100+d.sc)*bf;
+    d.heat=((d.eCov?0:pe.h*T.eRate)+(d.gCov?0:pg.h*T.gRate))/100*bf;
+    d.Fx=d.sc*bf;d.Bx=(pe.b*T.eRate+pg.b*T.gRate)/100*bf;d.Hx=(pe.h*T.eRate+pg.h*T.gRate)/100*bf;/* expected fixed, baseline, heating */d.gB=pg.b;d.gH=pg.h;d.eB=pe.b;d.eH=pe.h;d.gRate=T.gRate;
+    d.logged=(d.eCov||!fE)&&(d.gCov||!fG)&&(d.eCov||d.gCov);
+    // where the day's figure comes from: a single-day log, a period log split evenly, an estimate, or the forecast
+    d.kind=d.logged?((d.ePer&&!d.eDay)||(d.gPer&&!d.gDay)?'period':'day'):d.past?'est':'fc';
+    tot.e+=d.ec;tot.g+=d.gc;tot.st+=d.sc;tot.ex+=d.ex;tot.vat+=d.vat;tot.cost+=d.cost;tot.lo+=d.lo;tot.hi+=d.hi;
+    if(d.past){spent.cost+=d.cost;if(!d.logged){unlogged++;spent.est+=(d.ec+d.gc)*bf}}else{remDays++;remCost+=d.cost}}
+  tot.inc=tot.ex+tot.vat;
+  // billing months are calendar months; the first and last of the term are part months
+  const months=[];
+  for(let ms=t0;ms<=t1;){const dt=new Date(ms),yy=dt.getUTCFullYear(),mo=dt.getUTCMonth(),me=Math.min(Date.UTC(yy,mo+1,1)-DAY,t1);
+    const a=toS(ms),b=toS(me);const m={start:a,end:b,frac:(Math.round((me-ms)/DAY)+1)/dim(yy,mo),e:0,g:0,st:0,ex:0,vat:0,cost:0,lo:0,hi:0,eu:0,gu:0,days:0,loggedDays:0,pastDays:0,spent:0,dd:[]};
+    for(const d of days){if(d.s>=a&&d.s<=b){m.dd.push(d);m.e+=d.ec;m.g+=d.gc;m.st+=d.sc;m.ex+=d.ex;m.vat+=d.vat;m.cost+=d.cost;m.lo+=d.lo;m.hi+=d.hi;m.eu+=d.eu;m.gu+=d.gu;m.days++;if(d.logged)m.loggedDays++;if(d.past){m.pastDays++;m.spent+=d.cost}}}
+    m.inc=m.ex+m.vat;m.state=m.loggedDays===m.days?'logged':(m.pastDays===0&&m.loggedDays===0?'forecast':'partial');months.push(m);ms=me+DAY}
+  const cap=+S.capAmount||0,mode=S.capPeriod||'month',each=mode==='monthEach';
+  const monthsEq=months.reduce((s,m)=>s+m.frac,0);
+  const capTotal=mode==='term'?cap:cap*monthsEq,capMonth=monthsEq?capTotal/monthsEq:0;
+  let ci=months.findIndex(m=>TODAY>=m.start&&TODAY<=m.end);if(ci<0)ci=TODAY<S.termStart?0:months.length-1;
+  // allowance per month. Separate months: the cap (pro rata for part months).
+  // Pooled: each month's allowance is fixed when the month starts. Standing charges and normal baseline use are covered as they fall; whatever is left in the pot
+  // goes to heating as one multiplier (s) applied to every remaining month's expected heating need,
+  // so colder months get more, savings roll forward, and overspending lowers the remaining targets.
+  const share=(P,F,B,H)=>{if(H>0.5&&P-F-B>=0)return {s:(P-F-B)/H,t:1};return {s:0,t:B>0?Math.max(0,(P-F)/B):0}};
+  const sumOf=(dd,k)=>dd.reduce((a,d)=>a+d[k],0);
+  let mult=null;
+  // daily targets: d.plan is the month's allowance spread by expected need as it stood at the start of the month;
+  // d.target is the same for days already gone, and for days still to come it's re-planned from what's been spent
+  const dayAllow=(d,sh)=>d.Fx+sh.t*d.Bx+sh.s*d.Hx;
+  const shareOf=(P,dd)=>share(P,sumOf(dd,'Fx'),sumOf(dd,'Bx'),sumOf(dd,'Hx'));
+  const allPast=months[months.length-1].end<TODAY,live=!allPast&&TODAY>=S.termStart;
+  if(each){months.forEach((m,k)=>{m.allow=cap*m.frac;const sh0=shareOf(m.allow,m.dd);for(const d of m.dd)d.plan=d.target=dayAllow(d,sh0);m.planAllow=m.allow;
+      if(live&&k===ci){const sunk=sumOf(m.dd.filter(d=>d.past),'cost'),rest=m.dd.filter(d=>!d.past);const sh=shareOf(m.allow-sunk,rest);for(const d of rest)d.target=dayAllow(d,sh)}})}
+  else{let pool=capTotal;const lastDone=allPast?months.length:ci;
+    for(let k=0;k<lastDone;k++){const m=months[k],rest=months.slice(k).flatMap(x=>x.dd);
+      const sh=shareOf(pool,rest);
+      m.allow=sumOf(m.dd,'Fx')+sh.t*sumOf(m.dd,'Bx')+sh.s*sumOf(m.dd,'Hx');m.planAllow=m.allow;for(const d of m.dd)d.plan=d.target=dayAllow(d,sh);pool-=m.cost}
+    if(!allPast){const cur=months[ci],sunk=cur.dd.filter(d=>d.past).reduce((a,d)=>a+d.cost,0);
+      const sh0=shareOf(pool,months.slice(ci).flatMap(x=>x.dd));for(const d of cur.dd)d.plan=d.target=dayAllow(d,sh0);cur.planAllow=sumOf(cur.dd,'plan');
+      // this month's allowance stays as it was set at the start of the month; the days left are re-planned to fit it
+      cur.allow=cur.planAllow;const restCur=cur.dd.filter(d=>!d.past);
+      const shC=shareOf(cur.allow-sunk,restCur);mult=shC;for(const d of restCur)d.target=dayAllow(d,shC);
+      // later months share what's left after this month's forecast, so an overspend now comes straight off them
+      const shL=shareOf(pool-cur.cost,months.slice(ci+1).flatMap(x=>x.dd));
+      for(let k=ci+1;k<months.length;k++){const m=months[k];m.allow=sumOf(m.dd,'Fx')+shL.t*sumOf(m.dd,'Bx')+shL.s*sumOf(m.dd,'Hx');m.planAllow=m.allow;for(const d of m.dd)d.plan=d.target=dayAllow(d,shL)}}}
+  const over=k=>each?months.reduce((s,m)=>s+Math.max(0,m[k]-m.allow),0):Math.max(0,tot[k]-capTotal);
+  const extra=capTotal?{c:over('cost'),lo:over('lo'),hi:over('hi')}:null;
+  const cm=months[ci]&&TODAY>=S.termStart&&TODAY<=S.termEnd?months[ci]:null;
+  // heating headroom this month: how much of the forecast heating fits in this month's allowance
+  const scope=cm?cm.dd.filter(d=>!d.past):[];
+  const capLeft=cm?cm.allow-cm.spent:0;
+  const heat=scope.reduce((s,d)=>s+d.heat,0),nonHeat=scope.reduce((s,d)=>s+d.cost-d.heat,0);
+  let head=null;
+  if(capTotal&&scope.length){head={days:scope.length,capLeft,perDay:capLeft/scope.length,pace:(heat+nonHeat)/scope.length,heat};
+    if(heat>0.5){head.s=(capLeft-nonHeat)/heat;
+      head.gasNow=scope.reduce((s,d)=>s+d.gB+d.gH,0)/scope.length;head.gasOk=scope.reduce((s,d)=>s+d.gB+d.gH*Math.max(0,head.s),0)/scope.length}}
+  // recent week against what the model expects for that weather
+  const logged=days.filter(d=>d.eCov||d.gCov),last7=logged.slice(-7);
+  const avg=(arr,f)=>arr.length?arr.reduce((s,d)=>s+f(d),0)/arr.length:null;
+  const rE=last7.filter(d=>d.eCov),rG=last7.filter(d=>d.gCov);
+  const recent={e:avg(rE,d=>d.e),g:avg(rG,d=>d.g),n:last7.length,eExp:avg(rE,d=>d.exp.e),gExp:avg(rG,d=>d.exp.g)};
+  const coldDays=logged.filter(d=>d.h>=6).length,actualDays=days.filter(d=>d.src==='actual').length;
+  const conf=!useW?'flat':!fG||fG.u>=0.3?'low':fG.u>=0.15?'medium':'high';
+  return {n,days,tot,spent,inclVat,vatPct:vatOf(S),unlogged,remDays,remCost,months,capTotal,capMonth,each,extra,cm,head,fE,fG,
+    lastLogged,outside,overlap,recent,coldDays,actualDays,loggedDays:logged.length,conf,useW};
+}
+
+function renderBanner(S,ro){const b=$('banner');b.dataset.kind='';b.hidden=false;
+  if(ro)b.innerHTML=`Viewing a past term, <strong class="num">${fmtDateY(S.termStart)} – ${fmtDateY(S.termEnd)}</strong>. Past terms can’t be changed.<button type="button" class="btn ghost small" data-act="back-term">Back to the current term</button>`;
+  else if(S.termEnd&&TODAY>S.termEnd){b.dataset.kind='warn';b.innerHTML=`<strong>This term ended on ${fmtDateY(S.termEnd)}.</strong> If you’ve renewed or moved, start a new term to keep tracking.<button type="button" class="btn ghost small" data-act="new-term">Start a new term</button>`}
+  else if(!placeOf(S)&&S.seasonal!==false){b.dataset.kind='warn';b.innerHTML='Add your town or city under <a href="#" data-goto="settings">Tariff &amp; cap</a> so the forecast can use real temperatures.'}
+  else b.hidden=true}
+$('banner').addEventListener('click',e=>{const a=e.target.closest('[data-act]');if(!a)return;
+  if(a.dataset.act==='back-term')setView(-1);else if(a.dataset.act==='new-term'){showTab('settings');openNewTerm()}});
+
+function render(){
+  const {S,E,ro}=current();if(!S)return;
+  document.body.classList.toggle('readonly',ro);
+  renderBanner(S,ro);
+  const capWord=S.capPeriod==='term'?'for the term':S.capPeriod==='monthEach'?'a month, each month separate':'a month';
+  $('termLine').innerHTML=S.termStart&&S.termEnd?`Term <span class="num">${fmtDateY(S.termStart)} – ${fmtDateY(S.termEnd)}</span> · cap <span class="num">${gbp(+S.capAmount||0)}</span> ${capWord}`:'';
+  gasInputUnit=(settingsDoc||S).gasUnit||'kWh';updateInLabels();renderWeatherNote(settingsDoc||S);renderTariff(S);renderTerms();
+  const M=model(S,E);
+  renderEntries(S,E,ro,M);renderReadings();
+  {const sd=new Date(toD(S.termStart)).getUTCDate();
+    $('monthsNote').textContent='Calendar months.'+(sd!==1?` The first is a part month from ${fmtDate(S.termStart)}, when the term starts.`:'')+' Click a row for its days.'}
+  const tiles=['spent','monthVal','budget','recent'];$('clockLine').textContent='';
+  if(!M||M.empty){
+    $('projTotal').textContent='—';$('projVsCap').textContent=M?'Log some usage to see a forecast.':'Check the term dates in settings.';
+    setGauge(0,'');$('statusChip').textContent='Waiting for data';$('statusChip').dataset.s='';
+    tiles.forEach(k=>$(k).textContent='—');tiles.forEach(k=>$(k==='monthVal'?'monthNote':k+'Note').textContent='');
+    chartMonth=null;$('chartNav').hidden=true;$('monthSum').hidden=true;
+    $('chart').innerHTML='<div class="empty">The forecast appears once you’ve logged at least one day or period.</div>';
+    $('fuelSplit').innerHTML='';$('monthsTbl').innerHTML='';$('chartNote').textContent='';return}
+  const X=M.extra,ratio=M.capTotal?M.tot.cost/M.capTotal:0;
+  {const el=$('projTotal'),v=gbp(M.tot.cost);if(el.textContent!==v){el.textContent=v;}}
+  const rng=`Likely <span class="num">${gbp0(M.tot.lo)}–${gbp0(M.tot.hi)}</span>`;
+  let line2='';
+  if(X){line2=X.hi<0.5?`<strong>Nothing extra to pay</strong> even at the top of the range`
+    :X.lo>=0.5?`<strong style="color:var(--bad)">About ${gbp0(X.c)} extra to pay</strong> over the cap (<span class="num">${gbp0(X.lo)}–${gbp0(X.hi)}</span>)`
+    :X.c>=0.5?`<strong style="color:var(--bad)">Probably about ${gbp0(X.c)} over the cap</strong>: a mild winter could bring it under, a cold one up to <span class="num">${gbp0(X.hi)}</span> over`
+    :`<strong>Probably nothing extra</strong>, but up to <span class="num">${gbp0(X.hi)}</span> over in a cold winter`;
+    if(M.each&&X.c>=0.5){const om=M.months.filter(m=>m.cost>m.allow+0.005);line2+=` · ${om.length} month${om.length>1?'s':''} over`}}
+  const basis=M.inclVat?`incl. <span class="num">${gbp(M.tot.vat)}</span> VAT`:`excl. VAT`;
+  $('projVsCap').innerHTML=(M.capTotal?`${rng} · cap <span class="num">${gbp0(M.capTotal)}</span> · ${basis}<br>${line2}`:`${rng} · no cap set`);
+  const st=!X?'':X.hi<0.5?'good':X.c>=0.5?'bad':'warn';
+  setGauge(M.capTotal?ratio:0,st,M.capTotal);
+  const chip=$('statusChip');chip.dataset.s=st;chip.textContent=!X?'No cap set':st==='good'?'Comfortably under the cap':st==='warn'?'Cutting it close: a cold winter could tip it over':'Heading over the cap';
+  // spent so far
+  $('spent').textContent=gbp(M.spent.cost);
+  $('spentNote').textContent=M.unlogged?`Includes ${M.unlogged} unlogged day${M.unlogged>1?'s':''} estimated at ${gbp(M.spent.est)}`:'Every day so far is logged';
+  // this billing month
+  const cm=M.cm;
+  if(cm){const md=new Date(toD(cm.start));$('monthLbl').textContent=`This month (${MONL[md.getUTCMonth()]})`;
+    $('monthVal').innerHTML=`${gbp0(cm.cost)} <small>/ ${gbp0(cm.allow)} allowance</small>`;
+    const left=cm.dd.filter(d=>!d.past).length,base=cm.frac*(+S.capAmount||0)*(S.capPeriod==='term'?0:1),diff=cm.allow-base;
+    const pastD=cm.dd.filter(d=>d.past),est=pastD.filter(d=>!d.logged),logC=pastD.filter(d=>d.logged).reduce((a,d)=>a+d.cost,0),estC=est.reduce((a,d)=>a+d.cost,0);
+    $('monthNote').innerHTML=`<span class="num">${gbp(logC)}</span> logged`+(est.length?` (+<span class="num">${gbp(estC)}</span> estimated for ${est.some(d=>d.s===TODAY)&&est.length===1?'today':est.length+' unlogged day'+(est.length>1?'s':'')})`:'')+`, ${left} day${left===1?'':'s'} left, likely <span class="num">${gbp0(cm.lo)}–${gbp0(cm.hi)}</span>.`+
+      (!M.each&&base&&Math.abs(diff)>=1?` Allowance is ${gbp0(Math.abs(diff))} ${diff>0?'above':'below'} the flat ${gbp0(base)}.`:'');
+    $('monthVal').style.color=cm.lo>cm.allow?'var(--bad)':cm.hi>cm.allow?'var(--warn)':''}
+  else{$('monthVal').textContent='—';$('monthNote').textContent='Today is outside the term';$('monthVal').style.color=''}
+  // heating headroom
+  const H=M.head;$('budgetLbl').textContent='Heating headroom';
+  if(H&&H.s!=null){const pct=Math.round((H.s-1)*100);
+    $('budget').textContent=H.s<=0?'None':pct>100?H.s.toFixed(1)+'× forecast':(pct>=0?'+':'−')+Math.abs(pct)+'%';
+    $('budget').style.color=H.s<1?'var(--bad)':pct<15?'var(--warn)':'var(--good)';
+    const scopeTxt='the rest of this month';
+    $('budgetNote').innerHTML=H.s<=0?`This month’s allowance is used up even with no heating.`
+      :pct>=0?`${pct>100?`Plenty of room: you could use about ${H.s.toFixed(1)}× the forecast heating`:`You could heat about ${pct}% more than forecast`} for ${scopeTxt} and stay under. Gas: up to <span class="num">${kwh(H.gasOk)}</span> kWh/day (forecast <span class="num">${kwh(H.gasNow)}</span>).`
+      :`Cut heating by about ${Math.abs(pct)}% for ${scopeTxt} to stay under. Gas: aim for <span class="num">${kwh(H.gasOk)}</span> kWh/day (forecast <span class="num">${kwh(H.gasNow)}</span>).`}
+  else if(H){$('budgetLbl').textContent='Daily budget left';$('budget').textContent=gbp(H.perDay)+'/day';$('budget').style.color=H.pace>H.perDay?'var(--bad)':'';
+    $('budgetNote').textContent=`Forecast pace ${gbp(H.pace)}/day over the next ${H.days} days`}
+  else{$('budget').textContent='—';$('budgetNote').textContent=M.capTotal?'Term ended':'Set a cap to see this';$('budget').style.color=''}
+  // recent use vs expected
+  const r=M.recent,cmp=(v,ex)=>v==null||!ex?'':(()=>{const p=Math.round((v/ex-1)*100);return Math.abs(p)<5?'about as expected':p>0?`${p}% above expected`:`${-p}% below expected`})();
+  $('recent').innerHTML=`<i class="dot" style="--c:var(--elec)"></i>${r.e!=null?kwh(r.e):'—'} <small>/</small> <i class="dot" style="--c:var(--gas)"></i>${r.g!=null?kwh(r.g):'—'}`;
+  const ce=cmp(r.e,r.eExp),cg=cmp(r.g,r.gExp);
+  $('recentNote').textContent=`kWh/day elec / gas, last ${r.n} logged day${r.n===1?'':'s'}`+(M.useW&&(ce||cg)?`. For the weather: elec ${ce||'—'}, gas ${cg||'—'}.`:'.');
+  $('vatLegend').hidden=!M.inclVat;
+  renderTargets(M);renderChart(M);renderFuel(M,S);renderMonths(M);
+  const tw=weather&&weather.temps&&weather.temps[TODAY];const wm=$('wxMod');wm.dataset.bad='';wm.title='';
+  if(weather&&weather.error){wm.hidden=false;wm.dataset.bad='1';wm.textContent='Weather unavailable';wm.title=`Couldn’t get temperatures for “${placeOf(S)}”: ${weather.error}. Using ${typicalLabel()}.`}
+  else if(tw!=null){wm.hidden=false;wm.textContent=`${String(weather.place||'').split(',')[0]} ${tw.toFixed(1)} °C`}else wm.hidden=true;
+  $('clockLine').textContent=M.lastLogged?`Last reading ${fmtDate(M.lastLogged)}`:'';
+  // how the forecast was made
+  let wx;
+  if(!M.useW)wx='Forecast uses your average daily use (weather adjustment is off).';
+  else{const last=M.days.filter(d=>d.src==='actual').map(d=>d.s).pop(),fc=M.days.some(d=>d.src==='forecast');
+    wx=`Forecast fits your ${M.loggedDays} logged days`+(M.coldDays?` (${M.coldDays} in cold weather)`:'')+` against `+
+      (last?`actual temperatures for ${esc(weather.place||'your area')} to ${fmtDate(last)}${fc?', the 16-day forecast,':''} then ${typicalLabel()}.`:`${typicalLabel()}.`)}
+  const confTxt={high:'Confidence: high.',medium:'Confidence: medium. It firms up as you log more cold days.',low:'Confidence: low. Winter heating is a rough guess until you’ve logged a few cold weeks.',flat:''}[M.conf];
+  if(chartMonth==null)$('chartNote').textContent=fullView()?`Click a month to see its days. Solid bars are logged, hatched are forecast, whiskers show the likely range. The dashed line is each month’s allowance${M.each?'.':': standing charges and normal use are covered, and what’s left in the pot goes to heating, so colder months get more and anything you save rolls forward.'} ${wx} ${confTxt}`:viewNote(M)+' Click a month to see its days.';
+}
+
+function renderTariff(S){const box=$('tariffBox');if(!box)return;
+  const ts=[...(S.tariffs||[])].filter(t=>t.from).sort((a,b)=>a.from<b.from?-1:1);
+  if(!ts.length){box.innerHTML='<p class="note" style="margin:0">No rates yet. Add them under Tariff &amp; cap.</p>';return}
+  const on=TODAY<S.termStart?S.termStart:TODAY,T=tariffFor(S,on),next=ts.find(t=>t.from>on);
+  const p=v=>(+v||0).toLocaleString('en-GB',{maximumFractionDigits:3})+'p';
+  const row=(name,c,r,st)=>`<tr><td><span class="tf-fuel" style="--c:var(--${c})">${name}</span></td><td class="r num">${p(r)}<span class="muted"> /kWh</span></td><td class="r num">${p(st)}<span class="muted"> /day</span></td></tr>`;
+  box.innerHTML=`<table class="tf"><thead><tr><th>Fuel</th><th class="r">Unit rate</th><th class="r">Standing charge</th></tr></thead><tbody>`+row('Electricity','elec',T.eRate,T.eStand)+row('Gas','gas',T.gRate,T.gStand)+'</tbody></table>'+
+    `<p class="note" style="margin:0">Rates before VAT (${vatOf(S)}%), from ${fmtDateY(T.from)}${next?`. New rates from ${fmtDateY(next.from)}`:''}.</p>`}
+function renderWeatherNote(S){const el=$('weatherNote');if(!el)return;const place=placeOf(S);
+  if(!place){el.textContent='Enter your town or city to use real temperatures. Until then the forecast uses typical UK weather.';return}
+  if(!weather){el.textContent='Getting temperatures…';return}
+  if(weather.error){el.innerHTML=`Couldn’t get temperatures for “${esc(place)}” (${esc(weather.error)}). Using ${typicalLabel()} for now.`;return}
+  el.textContent=`Using temperatures for ${weather.place}`+(Array.isArray(weather.typical)?', and its average weather over the last five years beyond the 16-day forecast.':'.')}
+
+function renderEntries(S,E,ro,M){
+  const box=$('entriesBox');
+  if(!E.length){box.innerHTML=`<div class="empty">${ro?'No entries in this term.':`No entries yet. Back-fill from ${fmtDate(S.termStart)} with a period (a whole bill, say), add a day at a time, or enter meter readings.`}</div>`;$('coverage').textContent='';return}
+  const sorted=[...E].sort((a,b)=>a.from<b.from?1:-1);
+  if(M&&!M.empty){const logged=M.days.filter(d=>d.past&&(d.eCov||d.gCov)).length,past=M.days.filter(d=>d.past).length;$('coverage').textContent=`${logged} of ${past} days so far logged`+(M.overlap?` · ${M.overlap} overlapping`:'')}
+  let h='<div class="tbl-wrap"><table><thead><tr><th>Dates</th><th class="r">Elec kWh</th><th class="r">Gas kWh</th><th class="r">Units excl. VAT</th><th></th></tr></thead><tbody>';
+  for(const en of sorted){const days=Math.round((toD(en.to)-toD(en.from))/DAY)+1;let cost=0;
+    for(let t=toD(en.from);t<=toD(en.to);t+=DAY){const T=tariffFor(S,toS(t));cost+=((en.elec||0)/days)*T.eRate/100+((en.gas||0)/days)*T.gRate/100}
+    h+=`<tr><td>${en.from===en.to?fmtDate(en.from):fmtDate(en.from)+' – '+fmtDate(en.to)+` <span class="tag">${days} days</span>`}${en.reading?' <span class="tag" title="Worked out from two meter readings">From readings</span>':''}${en.gbp?` <span class="tag" title="Entered in pounds${en.gbp.vat?', incl. VAT':''}${en.gbp.stand?', incl. standing charge':''}">From £</span>`:''}</td>
+    <td class="r num">${en.elec!=null&&en.elec!==''?kwh(en.elec):'—'}</td><td class="r num">${en.gas!=null&&en.gas!==''?kwh(en.gas):'—'}</td><td class="r num">${gbp(cost)}</td>
+    <td class="r">${ro||en.reading?'':`<span data-id="${esc(en.id)}"><button class="btn ghost small" data-act="edit">Edit</button> <button class="btn ghost small" data-act="del">Delete</button></span>`}</td></tr>`}
+  h+='</tbody></table></div><p class="note" style="margin:0">Unit charges only, before VAT. Standing charges and VAT are added per day in the forecast.</p>';
+  box.innerHTML=h;
+}
+
+const UNIT_LBL={kWh:'kWh',m3:'m³',ft3:'ft³ (×100)'};
+const unitLabel=u=>UNIT_LBL[u||'kWh']||u;
+const fmtRead=r=>(+r.value).toLocaleString('en-GB',{maximumFractionDigits:3})+' '+unitLabel(r.unit);
+const latestReading=f=>readings.filter(r=>r.fuel===f).sort((a,b)=>a.date<b.date?1:-1)[0]||null;
+function renderReadings(){const box=$('readingsBox');const {E,R,ro}=current();
+  if(!R.length){box.innerHTML=`<div class="empty">${ro?'No meter readings in this term.':'No meter readings yet. Choose “Reading” under Add usage on the overview and enter what your meters show.'}</div>`;return}
+  const latest={};for(const r of R)if(!latest[r.fuel]||r.date>latest[r.fuel].date)latest[r.fuel]=r;
+  const sorted=[...R].sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:a.fuel<b.fuel?-1:1);
+  let h='<table><thead><tr><th>Date</th><th>Meter</th><th class="r">Reading</th><th class="r">Used since the previous reading</th><th></th></tr></thead><tbody>';
+  for(const r of sorted){const en=E.find(x=>x.reading===r.id),days=en?Math.round((toD(en.to)-toD(en.from))/DAY)+1:0,v=en?(r.fuel==='e'?en.elec:en.gas):null;
+    h+=`<tr><td class="num">${fmtDateY(r.date)}</td><td><span class="tf-fuel" style="--c:var(--${r.fuel==='e'?'elec':'gas'})">${r.fuel==='e'?'Electricity':'Gas'}</span></td><td class="r num">${esc(fmtRead(r))}</td>
+    <td class="r num">${en?`${kwh(v)} kWh over ${days} day${days===1?'':'s'}`:'<span class="muted">Starting reading</span>'}</td>
+    <td class="r">${!ro&&latest[r.fuel]===r?`<span data-rid="${esc(r.id)}"><button class="btn ghost small" data-act="rdel">Delete</button></span>`:''}</td></tr>`}
+  box.innerHTML=h+'</tbody></table><p class="note" style="margin:0">Only the latest reading for each meter can be deleted. Deleting it removes the usage it added.</p>'}
+$('readingsBox').addEventListener('click',e=>{const btn=e.target.closest('button[data-act]');if(!btn)return;const wrap=btn.parentElement,id=wrap.dataset.rid;
+  if(btn.dataset.act==='rdel'){wrap.innerHTML='<button class="btn danger small" data-act="rconfirm">Confirm delete</button> <button class="btn ghost small" data-act="rkeep">Keep</button>'}
+  else if(btn.dataset.act==='rkeep')render();
+  else if(btn.dataset.act==='rconfirm'){readings=readings.filter(r=>r.id!==id);entries=entries.filter(x=>x.reading!==id);queueSave();render();$('readHint').textContent=readHintText()}});
+
+function niceMax(v){if(v<=0)return 10;const p=Math.pow(10,Math.floor(Math.log10(v)));const f=v/p;return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p}
+function setGauge(ratio,st,capTotal){const f=Math.max(0,Math.min(ratio,1.25))/1.25,el=$('meterFill');el.style.width=(f*100).toFixed(1)+'%';el.dataset.s=st||'';
+  $('gaugePct').textContent=ratio?Math.round(ratio*100)+'%':'—';$('meterCapLbl').textContent=capTotal?'Cap '+gbp0(capTotal):'Cap'}
+let chartMonth=null;
+let chartFuel='all',chartUnit='gbp';try{chartFuel=localStorage.getItem('het-fuel')||'all';chartUnit=localStorage.getItem('het-unit')||'gbp'}catch(e){}
+if(!['all','e','g'].includes(chartFuel))chartFuel='all';if(!['gbp','kwh'].includes(chartUnit))chartUnit='gbp';
+const fullView=()=>chartFuel==='all'&&chartUnit==='gbp'; // the only view the cap applies to
+// what to stack for a month (day=false) or a day (day=true) in the current view
+function seriesOf(o,M,day){const E=day?o.ec:o.e,G=day?o.gc:o.g,ST=day?o.sc:o.st,bf=M.inclVat?1+M.vatPct/100:1;
+  if(chartUnit==='kwh')return chartFuel==='e'?[[o.eu,'elec']]:chartFuel==='g'?[[o.gu,'gas']]:[[o.eu,'elec'],[o.gu,'gas']];
+  if(chartFuel==='e')return [[E*bf,'elec']];if(chartFuel==='g')return [[G*bf,'gas']];
+  return [[ST,'stand'],[E,'elec'],[G,'gas'],...(M.inclVat?[[o.vat,'vat']]:[])]}
+function axisLbl(v,max){return chartUnit==='kwh'?(max<10?v.toFixed(1):Math.round(v).toLocaleString('en-GB')):money(v,max)}
+function topLbl(v,day){return chartUnit==='kwh'?(day?kwh(v):Math.round(v).toLocaleString('en-GB'))+' kWh':day?gbp(v):gbp0(v)}
+function viewNote(M){const f=chartFuel==='e'?'electricity':chartFuel==='g'?'gas':'electricity and gas';
+  return chartUnit==='kwh'?`Showing ${f} use in kWh. Switch to £ with both fuels to see the cap.`:`Showing ${f} unit costs${M.inclVat?' including VAT':''}, without standing charges. Switch to both fuels to see the cap.`} // index of the month open in the daily view, or null for all months
+const MONL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const WKD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+// use per day that keeps this month within its allowance: each fuel's baseline plus its forecast heating use scaled by the
+// headroom multiplier, so colder days get a bigger target. Baseline use is assumed to carry on, so most of any cut falls on gas.
+// Shows today and the next six days of this billing month.
+function renderTargets(M){const card=$('tgtCard'),H=M.head,cm=M.cm;
+  if(!H||H.s==null||!cm){card.hidden=true;return}
+  const sc=Math.max(0,H.s),dd=cm.dd.filter(d=>d.s>=TODAY).slice(0,7);
+  if(!dd.length){card.hidden=true;return}
+  card.hidden=false;
+  const mon=MONL[new Date(toD(cm.start)).getUTCMonth()],rest=cm.dd.filter(d=>!d.past),avgOf=f=>rest.length?rest.reduce((a,d)=>a+f(d),0)/rest.length:0;
+  const eOk=avgOf(d=>d.eB+d.eH*sc),eNow=avgOf(d=>d.eB+d.eH);
+  $('tgtNote').innerHTML=`Average for the rest of ${mon}: <span class="num">${kwh(eOk)}</span> kWh elec (forecast <span class="num">${kwh(eNow)}</span>), `+
+    `<span class="num">${kwh(H.gasOk)}</span> kWh gas (forecast <span class="num">${kwh(H.gasNow)}</span>). Colder days get more.`;
+  const T=weather&&weather.temps;
+  const vs=(cov,v,t)=>cov?`<span class="num" style="color:${v>t*1.03?'var(--bad)':'var(--good)'}">${kwh(v)}</span>`:'—';
+  $('tgtDays').innerHTML='<table class="tgt"><thead><tr><th>Day</th><th class="r">Temp</th><th class="r"><i class="dot" style="--c:var(--elec)"></i>Elec</th><th class="r"><i class="dot" style="--c:var(--gas)"></i>Gas</th><th class="r">Forecast</th></tr></thead><tbody>'+
+    dd.map(d=>{const dt=new Date(toD(d.s)),tE=d.eB+d.eH*sc,tG=d.gB+d.gH*sc,tc=T&&T[d.s]!=null?T[d.s]:null;
+    const lbl=d.s===TODAY?'Today':`${WKD[dt.getUTCDay()]} ${dt.getUTCDate()}`;
+    const foot=d.eCov||d.gCov?`Logged ${vs(d.eCov,d.e,tE)} / ${vs(d.gCov,d.g,tG)}`:`${kwh(d.eB+d.eH)} / ${kwh(d.gB+d.gH)}`;
+    return `<tr class="${d.s===TODAY?'today':''}"><td>${lbl}</td><td class="r muted" ${tc==null?'title="Typical weather"':''}>${tc!=null?Math.round(tc)+' °C':'—'}</td>`+
+      `<td class="r"><b>${kwh(tE)}</b></td><td class="r"><b>${kwh(tG)}</b></td><td class="r muted">${foot}</td></tr>`}).join('')+'</tbody></table>'}
+function setChartMode(M){
+  const k=chartMonth!=null&&M.months[chartMonth]?chartMonth:null;chartMonth=k;const day=k!=null;
+  $('chartNav').hidden=!day;$('monthSum').hidden=!day;$('legMonth').hidden=day;document.querySelectorAll('.legDay').forEach(e=>e.hidden=!day);
+  const full=fullView();$('legElec').hidden=chartFuel==='g';$('legGas').hidden=chartFuel==='e';$('legStand').hidden=!full;if(!full)$('vatLegend').hidden=true;
+  if(!full){$('legMonth').hidden=true;$('legTarget').hidden=true}
+  document.querySelectorAll('[data-fuel]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.fuel===chartFuel));document.querySelectorAll('[data-unit]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.unit===chartUnit));
+  if(day){const m=M.months[k],d=new Date(toD(m.start));$('chartH').textContent='Usage by day';$('chartNavTtl').textContent=`${MON[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+    document.querySelector('[data-nav="prev"]').disabled=k===0;document.querySelector('[data-nav="next"]').disabled=k===M.months.length-1}
+  else $('chartH').textContent='Usage by month';
+  return k}
+function renderChart(M){
+  if(setChartMode(M)!=null){renderMonthDetail(M,chartMonth);return}
+  const W=760,H=280,L=44,R=8,T=18,B=28,iw=W-L-R,ih=H-T-B;const ms=M.months;
+  const full=fullView(),sv=ms.map(m=>seriesOf(m,M,false)),tv=sv.map(a=>a.reduce((s,x)=>s+x[0],0));
+  const AX=axisScale((full?Math.max(...ms.map(m=>M.capTotal?m.allow||0:0),...ms.map(m=>m.state==='logged'?m.cost:m.hi)):Math.max(...tv))*1.12),maxV=AX.max;
+  const y=v=>T+ih-(v/maxV)*ih;const bw=iw/ms.length,pad=Math.max(4,bw*0.28);
+  const fuels=['stand','elec','gas','vat'];
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Monthly cost by fuel with cap line"><defs>`;
+  for(const c of fuels)s+=`<pattern id="h-${c}" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="var(--${c})" fill-opacity=".22"/><rect width="2.2" height="6" fill="var(--${c})" fill-opacity=".75"/></pattern>`;
+  ms.forEach((m,i)=>{const x=L+i*bw+pad/2,w=bw-pad,top=y(tv[i]);s+=`<clipPath id="cb${i}"><rect x="${x}" y="${top}" width="${w}" height="${T+ih-top+8}" rx="${Math.min(6,w/2)}"/></clipPath>`});
+  s+='</defs>';
+  const ticks=AX.n;for(let i=0;i<=ticks;i++){const v=maxV*i/ticks,yy=y(v);s+=`<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="var(--line)" stroke-width="1" ${i?'stroke-dasharray="2 4"':''}/><text x="${L-8}" y="${yy+4}" text-anchor="end">${axisLbl(v,maxV)}</text>`}
+  if(chartUnit==='kwh')s+=`<text x="${L-8}" y="${T-12}" text-anchor="end" style="font-weight:600">kWh</text>`;
+  ms.forEach((m,i)=>{const x=L+i*bw+pad/2,w=bw-pad;const hatch=m.state==='forecast';let base=0;
+    const seg=(v,c)=>{if(v<=0)return '';const r=`<rect x="${x}" y="${y(base+v)}" width="${w}" height="${Math.max(0,y(base)-y(base+v))}" fill="${hatch?`url(#h-${c})`:`var(--${c})`}" ${!hatch&&m.state==='partial'?'fill-opacity=".85"':''}/>`;base+=v;return r};
+    s+=`<g class="bar" clip-path="url(#cb${i})">${sv[i].map(([v,c])=>seg(v,c)).join('')}</g>`;
+    const over=full&&m.allow!=null&&M.capTotal&&m.cost>m.allow+0.005,est=full&&m.state!=='logged'&&m.hi-m.lo>0.5;
+    if(est){const cx=x+w/2;s+=`<g stroke="var(--ink)" stroke-opacity=".55" stroke-width="1.3"><line x1="${cx}" x2="${cx}" y1="${y(m.hi)}" y2="${y(m.lo)}"/><line x1="${cx-4}" x2="${cx+4}" y1="${y(m.hi)}" y2="${y(m.hi)}"/><line x1="${cx-4}" x2="${cx+4}" y1="${y(m.lo)}" y2="${y(m.lo)}"/></g>`}
+    if(bw>30)s+=`<text x="${x+w/2}" y="${y(est?m.hi:tv[i])-6}" text-anchor="middle" style="font-size:10px;${over?'fill:var(--bad);font-weight:600':''}">${topLbl(tv[i],false)}</text>`;
+    const d=new Date(toD(m.start)),lb=MON[d.getUTCMonth()]+(i===0||d.getUTCMonth()===0||i===ms.length-1?` ’${String(d.getUTCFullYear()).slice(2)}`:'');s+=`<text x="${x+w/2}" y="${H-8}" text-anchor="middle" style="fill:var(--${m.state==='forecast'?'muted':'ink'})">${lb}</text>`});
+  if(M.capTotal&&full){let p='';ms.forEach((m,i)=>{const x0=L+i*bw+2,x1=L+(i+1)*bw-2,yy=y(m.allow||0);p+=`${i?'L':'M'}${x0.toFixed(1)} ${yy.toFixed(1)} L${x1.toFixed(1)} ${yy.toFixed(1)} `});
+    s+=`<path d="${p}" fill="none" stroke="var(--plan)" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"/>`;
+    const k=ms.findIndex(m=>TODAY>=m.start&&TODAY<=m.end);const lm=k>=0?k:ms.length-1,lx=L+lm*bw+bw/2,ly=y(ms[lm].allow||0);
+    s+=`<rect x="${(lx-54).toFixed(1)}" y="${(ly-24).toFixed(1)}" width="108" height="16" rx="3" fill="var(--plan)"/><text x="${lx.toFixed(1)}" y="${(ly-12.5).toFixed(1)}" text-anchor="middle" style="fill:var(--plan-ink);font-weight:600;font-size:10.5px">Allowance ${gbp0(ms[lm].allow||0)}</text>`}
+  const ti=Math.round((toD(TODAY)-toD(M.days[0].s))/DAY);if(ti>=0&&ti<M.n){let idx=0;for(;idx<ms.length;idx++){if(TODAY<=ms[idx].end)break}
+    if(idx<ms.length){const m=ms[idx];const frac=(Math.round((toD(TODAY)-toD(m.start))/DAY)+0.5)/m.days;const xx=L+idx*bw+bw*frac;s+=`<line x1="${xx}" x2="${xx}" y1="${T-4}" y2="${T+ih}" stroke="var(--ink)" stroke-opacity=".45" stroke-width="1.2"/><circle cx="${xx}" cy="${T-4}" r="3" fill="var(--ink)"/><text x="${xx+6}" y="${T}" style="fill:var(--ink);font-weight:600">today</text>`}}
+  ms.forEach((m,i)=>{const d=new Date(toD(m.start));
+    s+=`<rect class="hit" data-mi="${i}" x="${(L+i*bw).toFixed(1)}" y="${T-6}" width="${bw.toFixed(1)}" height="${ih+B+6}" rx="6" tabindex="0" role="button" aria-label="Open the daily breakdown for ${MONL[d.getUTCMonth()]} ${d.getUTCFullYear()}"><title>${fmtDate(m.start)} – ${fmtDate(m.end)}: ${gbp(m.cost)}, ${kwh(m.eu)} kWh electricity, ${kwh(m.gu)} kWh gas (${m.state==='partial'?'part logged':m.state}). Click for the daily breakdown.</title></rect>`});
+  s+='</svg>';$('chart').innerHTML=s;
+}
+
+// axis scale: a round step (1, 2, 2.5 or 5 × a power of ten) with 3–5 gridlines that just covers v
+function axisScale(v){if(!(v>0))return {max:10,n:2};const p=Math.pow(10,Math.floor(Math.log10(v/5)));
+  for(const f of [1,2,2.5,5,10,20]){const st=f*p,n=Math.ceil(v/st-1e-9);if(n<=5)return {max:n*st,n:Math.max(1,n)}}return {max:niceMax(v),n:4}}
+function money(v,max){return max<10?'£'+v.toFixed(2):'£'+Math.round(v)}
+function renderMonthDetail(M,k){
+  const m=M.months[k],dd=m.dd,n=dd.length,cap=!!M.capTotal,now=TODAY>=m.start&&TODAY<=m.end;
+  const kinds={day:'logged on the day',period:'from a period log, split evenly',est:'not logged, estimated',fc:'forecast'};
+  // ----- summary line -----
+  const by=k=>dd.filter(d=>d.kind===k),sum=(a,f)=>a.reduce((s,d)=>s+f(d),0);
+  const nDay=by('day').length,nPer=by('period').length,est=by('est'),fc=by('fc');
+  const logC=sum(dd.filter(d=>d.logged),d=>d.cost),estC=sum(est,d=>d.cost),fcC=sum(fc,d=>d.cost);
+  const parts=[];if(nDay)parts.push(`${nDay} logged on the day`);if(nPer)parts.push(`${nPer} from period logs`);if(est.length)parts.push(`${est.length} estimated`);if(fc.length)parts.push(`${fc.length} to come`);
+  let t=`<strong class="num">${gbp(m.cost)}</strong>`+(m.state==='logged'?'':`, likely <span class="num">${gbp0(m.lo)}–${gbp0(m.hi)}</span>`)+` · ${parts.join(', ')}.`;
+  if(logC&&(estC||fcC))t+=` <span class="num">${gbp(logC)}</span> logged`+(estC?`, <span class="num">${gbp(estC)}</span> estimated`:'')+(fcC?`, <span class="num">${gbp(fcC)}</span> forecast`:'')+'.';
+  if(cap){const diff=m.cost-m.allow;
+    t+=`<br>Allowance <strong class="num">${gbp(m.allow)}</strong>`;
+    if(Math.abs((m.planAllow??m.allow)-m.allow)>=0.5)t+=` (it was <span class="num">${gbp(m.planAllow)}</span> at the start of the month)`;
+    if(now&&fc.length){const need=sum(fc,d=>d.target),pace=fcC/fc.length,per=need/fc.length;
+      t+=`. To stay on track: about <strong class="num" style="color:${pace>per?'var(--bad)':'var(--good)'}">${gbp(per)}/day</strong> for the ${fc.length} day${fc.length>1?'s':''} left (forecast pace <span class="num">${gbp(pace)}/day</span>).`}
+    else if(m.state==='forecast')t+=`, about <span class="num">${gbp(m.allow/n)}/day</span>. Forecast is <span class="num">${gbp0(Math.abs(diff))}</span> ${diff>0?'over':'under'}.`;
+    else t+=`. <span style="color:var(--${diff>0.005?'bad':'good'});font-weight:600">${gbp(Math.abs(diff))} ${diff>0.005?'over':'under'}</span>.`}
+  $('monthSum').innerHTML=t;
+  // ----- daily bars -----
+  const W=760,H=250,L=44,R=8,T=22,B=40,iw=W-L-R,ih=H-T-B;
+  const full=fullView(),sv=dd.map(d=>seriesOf(d,M,true)),tv=sv.map(a=>a.reduce((s,x)=>s+x[0],0)),showCap=cap&&full;
+  const top=(d,i)=>full?(d.logged?d.cost:d.hi):tv[i];
+  const AX=axisScale(Math.max(...dd.map(top),...(showCap?dd.map(d=>Math.max(d.target,d.plan)):[0]))*1.1),maxV=AX.max;
+  const y=v=>T+ih-(v/maxV)*ih,bw=iw/n,pad=Math.max(1.5,bw*0.2),w=bw-pad,xOf=i=>L+i*bw+pad/2;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Daily cost for ${MONL[new Date(toD(m.start)).getUTCMonth()]} with the daily target"><defs>`;
+  for(const c of ['stand','elec','gas','vat'])s+=`<pattern id="hd-${c}" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="var(--${c})" fill-opacity=".2"/><rect width="1.8" height="5" fill="var(--${c})" fill-opacity=".75"/></pattern>`;
+  s+='</defs>';
+  const nt=AX.n;for(let i=0;i<=nt;i++){const v=maxV*i/nt,yy=y(v);s+=`<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="var(--line)" ${i?'stroke-dasharray="2 4"':''}/><text x="${L-8}" y="${yy+4}" text-anchor="end">${axisLbl(v,maxV)}</text>`}
+  if(chartUnit==='kwh')s+=`<text x="${L-8}" y="${T-12}" text-anchor="end" style="font-weight:600">kWh</text>`;
+  dd.forEach((d,i)=>{const x=xOf(i),hatch=d.kind==='est'||d.kind==='fc';let base=0;
+    const op=d.kind==='period'?'.62':d.kind==='fc'?'.7':'1';
+    const seg=(v,c)=>{if(v<=0)return '';const r=`<rect x="${x.toFixed(2)}" y="${y(base+v).toFixed(2)}" width="${w.toFixed(2)}" height="${Math.max(0,y(base)-y(base+v)).toFixed(2)}" fill="${hatch?`url(#hd-${c})`:`var(--${c})`}" fill-opacity="${op}"/>`;base+=v;return r};
+    const dt=new Date(toD(d.s)),eu=d.eu,gu=d.gu;
+    const tip=`${WKD[dt.getUTCDay()]} ${fmtDate(d.s)}: ${gbp(d.cost)}${hatch?` (likely ${gbp(d.lo)}–${gbp(d.hi)})`:''}\n${kwh(eu)} kWh elec · ${kwh(gu)} kWh gas\n${d.kind==='period'&&d.per?`From the ${fmtDate(d.per.from)} – ${fmtDate(d.per.to)} log, split evenly`:kinds[d.kind][0].toUpperCase()+kinds[d.kind].slice(1)}`+(cap?`\nTarget ${gbp(d.target)}${Math.abs(d.target-d.plan)>0.005?` (was ${gbp(d.plan)})`:''}`:'');
+    s+=`<g class="day"><title>${esc(tip)}</title>${sv[i].map(([v,c])=>seg(v,c)).join('')}`;
+    if(full&&hatch&&d.hi-d.lo>0.02&&bw>9){const cx=x+w/2;s+=`<line x1="${cx}" x2="${cx}" y1="${y(d.hi)}" y2="${y(d.lo)}" stroke="var(--ink)" stroke-opacity=".45"/>`}
+    s+=`<rect x="${(L+i*bw).toFixed(2)}" y="${T}" width="${bw.toFixed(2)}" height="${ih}" fill="transparent"/></g>`});
+  // source strip: a dot for each day logged on its own, a bar for each run of days from the same period log
+  const sy=T+ih+8;
+  for(let i=0;i<n;){const d=dd[i];
+    if(d.kind==='period'&&d.per){let j=i;while(j+1<n&&dd[j+1].kind==='period'&&dd[j+1].per&&dd[j+1].per.from===d.per.from&&dd[j+1].per.to===d.per.to)j++;
+      const x0=xOf(i)+1,x1=xOf(j)+w-1,cut0=d.per.from<m.start,cut1=d.per.to>m.end;
+      s+=`<g><title>Period log ${fmtDate(d.per.from)} – ${fmtDate(d.per.to)}: the total is split evenly over its days</title><rect x="${x0.toFixed(1)}" y="${sy-2.5}" width="${Math.max(3,x1-x0).toFixed(1)}" height="5" rx="2.5" fill="var(--ink)" fill-opacity=".5"/>`+
+        (cut0?`<text x="${(x0+2).toFixed(1)}" y="${sy-4}" style="font-size:9px">←</text>`:'')+(cut1?`<text x="${(x1-2).toFixed(1)}" y="${sy-4}" text-anchor="end" style="font-size:9px">→</text>`:'')+`</g>`;i=j+1;continue}
+    const cx=xOf(i)+w/2;
+    if(d.kind==='day')s+=`<circle cx="${cx.toFixed(1)}" cy="${sy}" r="3" fill="var(--good)"><title>${fmtDate(d.s)} logged on the day</title></circle>`;
+    else if(d.kind==='est')s+=`<circle cx="${cx.toFixed(1)}" cy="${sy}" r="2.6" fill="none" stroke="var(--muted)" stroke-width="1.2"><title>${fmtDate(d.s)} not logged yet, estimated</title></circle>`;
+    i++}
+  // day numbers
+  dd.forEach((d,i)=>{const dt=new Date(toD(d.s)),dn=dt.getUTCDate(),wk=dt.getUTCDay();
+    if(bw>=17||dn===1||dn%5===0||i===n-1||i===0)s+=`<text x="${(xOf(i)+w/2).toFixed(1)}" y="${H-8}" text-anchor="middle" style="font-size:${bw>=17?9.5:10}px;${wk===0||wk===6?'opacity:.6;':''}${d.s===TODAY?'fill:var(--ink);font-weight:700':''}">${dn}</text>`});
+  // daily target line
+  if(showCap){const step=key=>{let p='';dd.forEach((d,i)=>{const x0=L+i*bw,x1=x0+bw,yy=y(d[key]).toFixed(1);p+=`${i?'L':'M'}${x0.toFixed(1)} ${yy} L${x1.toFixed(1)} ${yy} `});return p};
+    const moved=dd.some(d=>Math.abs(d.target-d.plan)>0.005);
+    if(moved)s+=`<path d="${step('plan')}" fill="none" stroke="var(--muted)" stroke-width="1.3" stroke-dasharray="2 3" stroke-opacity=".8"><title>Daily target as planned at the start of the month</title></path>`;
+    s+=`<path d="${step('target')}" fill="none" stroke="var(--plan)" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"><title>Daily target to stay within the cap</title></path>`;
+    const li=now?Math.max(0,dd.findIndex(d=>!d.past)):0,ld=dd[li<0?0:li],lx=Math.min(W-R-48,Math.max(L+48,L+li*bw+bw/2)),ly=y(ld.target);
+    s+=`<rect x="${(lx-46).toFixed(1)}" y="${(ly-22).toFixed(1)}" width="92" height="15" rx="3" fill="var(--plan)"/><text x="${lx.toFixed(1)}" y="${(ly-11.5).toFixed(1)}" text-anchor="middle" style="fill:var(--plan-ink);font-weight:600;font-size:10.5px">Target ${gbp(ld.target)}</text>`}
+  if(now){const i=dd.findIndex(d=>d.s===TODAY),xx=L+i*bw+bw/2;s+=`<line x1="${xx}" x2="${xx}" y1="${T-4}" y2="${T+ih}" stroke="var(--ink)" stroke-opacity=".45" stroke-width="1.2"/><circle cx="${xx}" cy="${T-4}" r="3" fill="var(--ink)"/><text x="${xx+6}" y="${T}" style="fill:var(--ink);font-weight:600">today</text>`}
+  s+='</svg>';
+  // ----- running total vs plan -----
+  const RH=150,RT=14,RB=22,rih=RH-RT-RB;let cum=0,cumP=0;const pts=dd.map(d=>{cum+=d.cost;cumP+=d.plan;return {c:cum,p:cumP,lo:0,hi:0,d}});
+  let lo=0,hi=0;pts.forEach(p=>{lo+=p.d.lo;hi+=p.d.hi;p.lo=lo;p.hi=hi});
+  const RX=axisScale(Math.max(cum,hi,cap?Math.max(cumP,m.allow):0)*1.06),rmax=RX.max,ry=v=>RT+rih-(v/rmax)*rih,rx=i=>L+(i+1)*bw;
+  let r=`<svg viewBox="0 0 ${W} ${RH}" role="img" aria-label="Running total for the month against the plan">`;
+  const rn=RX.n;for(let i=0;i<=rn;i++){const v=rmax*i/rn,yy=ry(v);r+=`<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="var(--line)" ${i?'stroke-dasharray="2 4"':''}/><text x="${L-8}" y="${yy+4}" text-anchor="end">£${Math.round(v)}</text>`}
+  const line=(arr,f)=>`M${L} ${ry(0).toFixed(1)} `+arr.map(p=>`L${rx(p.i).toFixed(1)} ${ry(f(p)).toFixed(1)}`).join(' ');
+  const P=pts.map((p,i)=>({...p,i})),lastPast=P.filter(p=>p.d.past).pop(),fut=P.filter(p=>!p.d.past);
+  if(fut.length){const a=lastPast?[lastPast,...fut]:fut;const band=a.map(p=>`${rx(p.i).toFixed(1)},${ry(p.hi).toFixed(1)}`).join(' ')+' '+[...a].reverse().map(p=>`${rx(p.i).toFixed(1)},${ry(p.lo).toFixed(1)}`).join(' ');
+    r+=`<polygon points="${band}" fill="var(--ink)" fill-opacity=".07"/>`}
+  if(cap){r+=`<path d="${line(P,p=>p.p)}" fill="none" stroke="var(--plan)" stroke-width="2" stroke-dasharray="5 4"><title>On track: the month’s plan, built up day by day</title></path>`;
+    const end=P[P.length-1];r+=`<text x="${rx(end.i)-4}" y="${ry(end.p)-6}" text-anchor="end" style="fill:var(--plan);font-weight:600">Plan ${gbp0(end.p)}</text>`}
+  const past=P.filter(p=>p.d.past);
+  if(past.length)r+=`<path d="${line(past,p=>p.c)}" fill="none" stroke="var(--ink)" stroke-width="2.2" stroke-linejoin="round"/>`;
+  if(fut.length){const a=lastPast?[lastPast,...fut]:fut;r+=`<path d="${(lastPast?`M${rx(lastPast.i).toFixed(1)} ${ry(lastPast.c).toFixed(1)} `:`M${L} ${ry(0).toFixed(1)} `)+a.map(p=>`L${rx(p.i).toFixed(1)} ${ry(p.c).toFixed(1)}`).join(' ')}" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-dasharray="1.5 3.5" stroke-linecap="round"/>`}
+  {const e=P[P.length-1];r+=`<circle cx="${rx(e.i)}" cy="${ry(e.c)}" r="3" fill="var(--ink)"/>`}
+  if(lastPast&&fut.length){const ahead=cap?lastPast.c-lastPast.p:null;r+=`<circle cx="${rx(lastPast.i)}" cy="${ry(lastPast.c)}" r="3.5" fill="var(--panel)" stroke="var(--ink)" stroke-width="2"/>`+
+    `<text x="${rx(lastPast.i)+7}" y="${ry(lastPast.c)+14}" style="fill:var(--ink);font-weight:600">${gbp0(lastPast.c)}${ahead!=null?` · ${gbp0(Math.abs(ahead))} ${ahead>0?'over':'under'} plan`:''}</text>`}
+  r+='</svg>';
+  $('chart').innerHTML=s+(full?`<div class="run"><p class="run-h">Running total${cap?' against plan':''}${fut.length?' (dotted is forecast)':''}</p>${r}</div>`:'');
+  $('chartNote').textContent=(full?'':viewNote(M)+' ')+`Each bar is one day. A green dot means the day was logged on its own. A grey bar underneath means the figure comes from a period log, with the total split evenly over its days. Hatched bars are estimated (not logged yet) or forecast.`+(showCap?` The dashed line is the daily target that keeps you within the cap.${M.each?' It spreads this month’s allowance by expected need.':' Standing charges and normal use are covered, and what’s left goes to heating, so colder days get more.'} Days still to come are re-planned every time you add an entry.${dd.some(d=>Math.abs(d.target-d.plan)>0.005)?' The grey dotted line is the plan from the start of the month.':''}`:'');
+}
+
+function renderFuel(M,S){
+  const totU=M.days.reduce((a,d)=>({e:a.e+d.eu,g:a.g+d.gu}),{e:0,g:0});
+  const box=(lbl,c,cost,u,extra)=>`<div class="fuel" style="--c:var(--${c})"><span class="eyebrow">${lbl}</span><span class="mid">${gbp(cost)}</span><span class="note">${extra}</span></div>`;
+  $('fuelSplit').innerHTML=box('Electricity','elec',M.tot.e,totU.e,`${kwh(totU.e)} kWh over the term`)+box('Gas','gas',M.tot.g,totU.g,`${kwh(totU.g)} kWh over the term`)
+   +box('Standing charges','stand',M.tot.st,0,`${M.tot.ex?Math.round(M.tot.st/M.tot.ex*100):0}% of the bill. Fixed, so usage can’t reduce it`)+box(`VAT @ ${M.vatPct}%`,'vat',M.tot.vat,0,M.inclVat?'Counted towards the cap':'Not counted: your cap excludes VAT');
+}
+
+function renderMonths(M){
+  const sign=v=>(v>0.005?'+':'−')+gbp(Math.abs(v)).replace('−','');const vf=M.inclVat?1:1+M.vatPct/100;
+  let h='<thead><tr><th>Month</th><th></th><th class="r">Elec</th><th class="r">Gas</th><th class="r">Standing</th><th class="r">VAT</th><th class="r">Total</th><th class="r">Allowance</th><th class="r">vs allowance</th></tr></thead><tbody>';
+  M.months.forEach((m,mi)=>{const d=m.cost-(m.allow||0);const over=M.capTotal&&d>0.005;const now=TODAY>=m.start&&TODAY<=m.end;
+    h+=`<tr class="${over?'over':''} ${now?'now':''}" data-mi="${mi}" title="Show the daily breakdown"><td class="num">${fmtDate(m.start)} – ${fmtDate(m.end)}</td><td><span class="tag" data-k="${m.state}">${now?'Now':m.state==='logged'?'Logged':m.state==='partial'?'Part logged':'Forecast'}</span></td>
+    <td class="r num">${gbp(m.e)}</td><td class="r num">${gbp(m.g)}</td><td class="r num">${gbp(m.st)}</td><td class="r num">${gbp(m.vat)}</td><td class="r num"><strong>${gbp(m.inc)}</strong>${m.state!=='logged'?`<div class="rng">${gbp0(m.lo*vf)}–${gbp0(m.hi*vf)}</div>`:''}</td><td class="r num">${M.capTotal?gbp(m.allow):'—'}</td><td class="r num">${M.capTotal?sign(d):'—'}</td></tr>`});
+  h+=`</tbody><tfoot><tr><td><strong>Term</strong></td><td></td><td class="r num">${gbp(M.tot.e)}</td><td class="r num">${gbp(M.tot.g)}</td><td class="r num">${gbp(M.tot.st)}</td><td class="r num">${gbp(M.tot.vat)}</td><td class="r num"><strong>${gbp(M.tot.inc)}</strong></td><td class="r num">${M.capTotal?gbp(M.capTotal):'—'}</td><td class="r num">${M.capTotal?sign(M.tot.cost-M.capTotal):'—'}</td></tr></tfoot>`;
+  $('monthsTbl').innerHTML=h;
+}
+
+// ---------- saving: every change goes to the data file through the local app ----------
+let saveTimer=null,saving=false,pendingSave=false,unsaved=false,retryTimer=null,pingFails=0;
+const hhmm=()=>new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+function setAppStatus(t,bad){const el=$('appStatus');el.hidden=false;el.title=t;el.dataset.bad=bad?'1':'';el.dataset.busy=t==='Saving…'?'1':'';
+  const m=t.match(/at (\d\d:\d\d)$/);el.textContent=bad?'Not saved':t==='Saving…'?'Saving…':m?'Saved '+m[1]:'Autosave on'}
+function showAlert(html){const a=$('alert');a.hidden=!html;if(html)a.innerHTML=html}
+const netWhy=e=>e&&e.message&&!/fetch|network|load failed/i.test(e.message)?e.message:'the app isn’t responding';
+function payload(){return JSON.stringify({app:'house-energy-tracker',version:2,saved:new Date().toISOString(),settings:settingsDoc,entries,readings,archive},null,2)}
+function applyData(o){
+  settingsDoc=o.settings||null;entries=Array.isArray(o.entries)?o.entries:[];readings=Array.isArray(o.readings)?o.readings:[];
+  archive=Array.isArray(o.archive)?o.archive.filter(a=>a&&a.settings&&a.settings.termStart):[];viewTerm=-1;
+  if(o.path){dataPath=o.path;$('dataPath').textContent=o.path}}
+function queueSave(){unsaved=true;setAppStatus('Saving…');clearTimeout(saveTimer);saveTimer=setTimeout(flushSave,300)}
+async function flushSave(){if(saving){pendingSave=true;return}saving=true;clearTimeout(retryTimer);
+  try{const r=await fetch('/api/data',{method:'POST',headers:{'Content-Type':'application/json'},body:payload()});
+    const o=await r.json().catch(()=>({}));if(!r.ok)throw new Error(o.error||`the app answered ${r.status}`);
+    unsaved=false;showAlert('');setAppStatus('Saved to '+o.path+' at '+hhmm())}
+  catch(e){const why=netWhy(e);setAppStatus('Not saved: '+why,true);
+    showAlert(`<strong>Your latest changes aren’t saved</strong> (${esc(why)}). Trying again every few seconds, so keep this window open.`);
+    retryTimer=setTimeout(flushSave,5000)}
+  saving=false;if(pendingSave){pendingSave=false;flushSave()}}
+let wxSeq=0;
+async function loadWeather(again){const {S}=current();if(!S||!S.termStart||!S.termEnd)return;const place=placeOf(S),seq=++wxSeq;
+  if(!place||S.seasonal===false){weather=null;render();return}
+  let o;
+  try{const r=await fetch(`/api/weather?place=${encodeURIComponent(place)}&start=${S.termStart}&end=${S.termEnd}`,{cache:'no-store'});o=await r.json()}
+  catch(e){o={error:netWhy(e)}}
+  if(seq!==wxSeq)return; // a newer request (another term or town) has started
+  weather=o&&o.temps?o:{error:(o&&o.error)||'no data'};
+  // A saved copy more than six hours old comes back at once while the app fetches a fresh one; pick that up shortly.
+  if(weather.stale&&!again)setTimeout(()=>{if(seq===wxSeq)loadWeather(true)},20000);
+  render()}
+function startApp(){
+  setInterval(async()=>{try{const r=await fetch('/api/ping',{cache:'no-store'});if(!r.ok)throw 0;if(pingFails>=2&&!unsaved)showAlert('');pingFails=0}
+    catch(e){if(++pingFails===2&&!unsaved)showAlert('<strong>Lost contact with the app.</strong> Changes can’t be saved until it’s running again. Close this window and open House Energy Tracker again.')}},15000);
+  window.addEventListener('pagehide',()=>{try{navigator.sendBeacon('/api/bye')}catch(e){}});
+  window.addEventListener('beforeunload',e=>{if(unsaved){e.preventDefault();e.returnValue=''}})}
+async function post(url,body){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const o=r.status===204?{}:await r.json().catch(()=>({}));if(!r.ok)throw new Error(o.error||`the app answered ${r.status}`);return o}
+
+// ---------- your data: export, import, show the file ----------
+function dataMsg(kind,html){const m=$('dataMsg');m.dataset.kind=kind;m.innerHTML=html}
+let lastExport=null,pendingImport=null;
+async function exportFile(name,content){try{const o=await post('/api/export',{name,content});lastExport=o.path;dataMsg('ok',`Saved to ${esc(o.path)}. <a href="#" data-act="reveal-export">Show in folder</a>`)}
+  catch(e){dataMsg('err','Couldn’t export: '+esc(netWhy(e)))}}
+const csvCell=v=>v==null?'':/[",\r\n]/.test(String(v))?'"'+String(v).replace(/"/g,'""')+'"':String(v);
+function toCsv(E){const rows=[['from','to','electricity_kwh','gas_kwh','source']];
+  for(const en of [...E].sort((a,b)=>a.from<b.from?-1:a.from>b.from?1:0))rows.push([en.from,en.to,en.elec,en.gas,en.reading?'meter reading':en.gbp?'entered in £':en.from===en.to?'day':'period']);
+  return rows.map(r=>r.map(csvCell).join(',')).join('\r\n')+'\r\n'}
+function parseCsv(text){const rows=[];let row=[],cell='',q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){cell+='"';i++}else q=false}else cell+=c}
+    else if(c==='"')q=true;else if(c===','){row.push(cell);cell=''}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell);rows.push(row);row=[];cell=''}else cell+=c}
+  if(cell!==''||row.length){row.push(cell);rows.push(row)}
+  return rows.filter(r=>r.some(c=>c.trim()!==''))}
+function csvDate(s){s=String(s||'').trim();let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/),iso=null;
+  if(m)iso=isoOf(+m[1],+m[2]-1,+m[3]);else if((m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)))iso=isoOf(+m[3],+m[2]-1,+m[1]);
+  return iso&&toS(toD(iso))===iso?iso:null}
+function importCsv(text){if(!settingsDoc)throw new Error('Finish setting up first, then import the CSV.');
+  const rows=parseCsv(text.replace(/^\uFEFF/,''));if(rows.length<2)throw new Error('That CSV has no rows to import.');
+  const head=rows[0].map(h=>h.trim().toLowerCase()),col=(...ks)=>head.findIndex(h=>ks.includes(h));
+  const iF=col('from'),iT=col('to'),iE=col('electricity_kwh','electricity','elec'),iG=col('gas_kwh','gas');
+  if(iF<0||iT<0||(iE<0&&iG<0))throw new Error('The first row of the CSV needs the column names from, to, electricity_kwh and gas_kwh.');
+  const num=v=>{v=String(v||'').trim();return v===''?null:isFinite(+v)&&+v>=0?+v:NaN};
+  const key=en=>[en.from,en.to,en.elec??'',en.gas??''].join('|'),have=new Set(entries.map(key));let added=0,dup=0;const bad=[];
+  rows.slice(1).forEach((r,i)=>{const from=csvDate(r[iF]),to=csvDate(r[iT]),e=iE<0?null:num(r[iE]),g=iG<0?null:num(r[iG]);
+    if(!from||!to||to<from||Number.isNaN(e)||Number.isNaN(g)||(e==null&&g==null)){bad.push(i+2);return}
+    const en={id:'l'+Date.now()+'-'+i,from,to,elec:e,gas:g,gasRaw:null,gasUnit:'kWh',gbp:null,updated:new Date().toISOString()};
+    if(have.has(key(en))){dup++;return}have.add(key(en));entries.push(en);added++});
+  if(added){queueSave();render()}
+  dataMsg(added?'ok':'err',`Added ${added} entr${added===1?'y':'ies'}`+(dup?`, skipped ${dup} you already had`:'')+
+    (bad.length?`. Couldn’t read row${bad.length>1?'s':''} ${bad.slice(0,8).join(', ')}${bad.length>8?'…':''}`:'')+'.')}
+function importJson(text){let o;try{o=JSON.parse(text)}catch(e){throw new Error('That file isn’t a backup: it isn’t valid JSON.')}
+  if(!o||!Array.isArray(o.entries))throw new Error('That file isn’t a House Energy Tracker backup.');
+  pendingImport=o;if(!settingsDoc&&!entries.length)return doImport();
+  const n=o.entries.length,p=Array.isArray(o.archive)?o.archive.length:0;
+  $('importQ').innerHTML=`Replace all your data with this backup? It has ${n} entr${n===1?'y':'ies'}${p?` and ${p} past term${p>1?'s':''}`:''}${o.saved?`, saved on ${esc(fmtDateY(String(o.saved).slice(0,10)))}`:''}. Export a backup of your current data first if you might want it back.`;
+  $('importBox').hidden=false}
+function doImport(){const o=pendingImport;pendingImport=null;$('importBox').hidden=true;if(!o)return;
+  applyData({...o,path:dataPath});queueSave();dataMsg('ok',`Restored ${entries.length} entr${entries.length===1?'y':'ies'}.`);
+  if(document.body.classList.contains('setup')){if(settingsDoc)finishSetup()}else{fillSettings();render();loadWeather()}}
+$('importGo').onclick=doImport;
+$('importCancel').onclick=()=>{pendingImport=null;$('importBox').hidden=true};
+$('importFile').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const rd=new FileReader();
+  rd.onload=()=>{try{(/\.csv$/i.test(f.name)||f.type==='text/csv'?importCsv:importJson)(String(rd.result))}catch(err){dataMsg('err',esc(err.message))}};
+  rd.onerror=()=>dataMsg('err','Couldn’t read that file.');rd.readAsText(f)});
+$('exportCsv').onclick=()=>{const {S,E}=current();exportFile(`energy-usage-${S.termStart}-to-${S.termEnd}.csv`,toCsv(E))};
+$('exportJson').onclick=()=>exportFile(`energy-backup-${TODAY}.json`,payload());
+$('revealData').onclick=e=>{e.preventDefault();post('/api/reveal',{}).catch(err=>dataMsg('err','Couldn’t open the folder: '+esc(netWhy(err))))};
+$('dataMsg').addEventListener('click',e=>{if(e.target.closest('[data-act="reveal-export"]')){e.preventDefault();post('/api/reveal',{path:lastExport}).catch(()=>{})}});
+
+// ---------- terms: start a new one, look back at past ones ----------
+function renderTerms(){const box=$('termsBox');if(!settingsDoc){box.innerHTML='';return}
+  const row=(S,i,n,cur)=>`<tr${viewTerm===i?' class="now"':''}><td class="num">${fmtDateY(S.termStart)} – ${fmtDateY(S.termEnd)}${cur?' <span class="tag">Current</span>':''}</td><td class="r num">${n} entr${n===1?'y':'ies'}</td>
+    <td class="r">${viewTerm===i?'<span class="tag">Showing</span>':`<button type="button" class="btn ghost small" data-term="${i}">View</button>`}</td></tr>`;
+  let h='<table><thead><tr><th>Term</th><th class="r">Entries</th><th></th></tr></thead><tbody>'+row(settingsDoc,-1,entries.length,true);
+  for(let i=archive.length-1;i>=0;i--)h+=row(archive[i].settings,i,(archive[i].entries||[]).length,false);
+  box.innerHTML=h+'</tbody></table>'}
+$('termsBox').addEventListener('click',e=>{const b=e.target.closest('[data-term]');if(b)setView(+b.dataset.term)});
+function setView(i){viewTerm=i;chartMonth=null;weather=null;render();loadWeather();if(i>=0)showTab('overview')}
+function openNewTerm(){const S=settingsDoc,st=S.termEnd?toS(toD(S.termEnd)+DAY):TODAY;
+  $('ntStart').value=st;$('ntEnd').value=toS(toD(addMonths(st,12))-DAY);$('ntMsg').textContent='';$('newTermBox').hidden=false;$('newTermBtn').hidden=true}
+function closeNewTerm(){$('newTermBox').hidden=true;$('newTermBtn').hidden=false}
+$('newTermBtn').onclick=openNewTerm;$('ntCancel').onclick=closeNewTerm;
+$('ntGo').onclick=()=>{const a=$('ntStart').value,b=$('ntEnd').value,msg=$('ntMsg'),old=settingsDoc;
+  if(!a||!b||b<a){msg.dataset.kind='err';msg.textContent='Set an end date after the start date.';return}
+  if(a<=old.termStart){msg.dataset.kind='err';msg.textContent=`The new term has to start after ${fmtDateY(old.termStart)}, when the current one started.`;return}
+  archive.push({settings:old,entries,readings,archived:new Date().toISOString()});
+  const T=tariffFor(old,a); // the rates in force when the new term starts
+  settingsDoc={...old,termStart:a,termEnd:b,tariffs:[{from:a,eRate:T.eRate||0,eStand:T.eStand||0,gRate:T.gRate||0,gStand:T.gStand||0}]};
+  readings=['e','g'].map(latestReading).filter(Boolean);entries=[];
+  viewTerm=-1;chartMonth=null;weather=null;queueSave();closeNewTerm();fillSettings();render();loadWeather();
+  $('settingsMsg').dataset.kind='ok';$('settingsMsg').textContent='New term started. Check the cap and tariff, then save.'};
+
+// ---------- settings form ----------
+function setupDefaults(){return {termStart:TODAY,termEnd:toS(toD(addMonths(TODAY,12))-DAY),capAmount:'',capPeriod:'month',gasUnit:'kWh',gasCV:39.5,seasonal:true,vatRate:5,capInclVat:true,weatherPlace:'',tariffs:[{from:TODAY}]}}
+function fillSettings(){const S=settingsDoc||setupDefaults();$('sStart').value=S.termStart||'';$('sEnd').value=S.termEnd||'';$('sCap').value=S.capAmount??'';$('sCapPeriod').value=S.capPeriod||'month';
+  $('sGasUnit').value=S.gasUnit||'kWh';$('sCV').value=S.gasCV??39.5;$('sSeasonal').checked=S.seasonal!==false;
+  if(settingsDoc&&settingsDoc.palette)applyPalette(settingsDoc.palette);$('sVat').value=vatOf(S);$('sPlace').value=placeOf(S);$('sCapVat').checked=S.capInclVat!==false;
+  const rows=$('tariffRows');rows.innerHTML='';(S.tariffs&&S.tariffs.length?S.tariffs:[{from:S.termStart}]).forEach(addTariffRow);
+  $('settingsMsg').textContent='';$('settingsMsg').dataset.kind=''}
+let tRowN=0;
+function addTariffRow(t){t=t||{};const n=tRowN++;const div=document.createElement('div');div.className='tariff-row';
+  div.innerHTML=`<label class="from">From<input type="date" id="tf${n}" value="${esc(t.from||'')}"></label>
+  <label>Elec p/kWh<input type="number" step="0.001" min="0" id="te${n}" value="${t.eRate??''}"></label>
+  <label>Elec p/day<input type="number" step="0.001" min="0" id="tes${n}" value="${t.eStand??''}"></label>
+  <label>Gas p/kWh<input type="number" step="0.001" min="0" id="tg${n}" value="${t.gRate??''}"></label>
+  <label>Gas p/day<input type="number" step="0.001" min="0" id="tgs${n}" value="${t.gStand??''}"></label>
+  <button type="button" class="btn ghost small" aria-label="Remove this rate">Remove</button>`;
+  div.querySelector('button').onclick=()=>{if($('tariffRows').children.length>1)div.remove()};$('tariffRows').appendChild(div);enhanceInputs(div)}
+$('addTariff').onclick=()=>addTariffRow({from:TODAY});
+$('settingsForm').addEventListener('submit',async e=>{e.preventDefault();const msg=$('settingsMsg');
+  const tariffs=[...$('tariffRows').children].map(r=>{const v=[...r.querySelectorAll('input:not([data-ui])')].map(i=>i.value);return {from:v[0],eRate:+v[1]||0,eStand:+v[2]||0,gRate:+v[3]||0,gStand:+v[4]||0}}).filter(t=>t.from);
+  const S={termStart:$('sStart').value,termEnd:$('sEnd').value,capAmount:+$('sCap').value||0,capPeriod:$('sCapPeriod').value,gasUnit:$('sGasUnit').value,gasCV:+$('sCV').value||39.5,seasonal:$('sSeasonal').checked,vatRate:$('sVat').value===''?5:+$('sVat').value,capInclVat:$('sCapVat').checked,weatherPlace:$('sPlace').value.trim(),palette:(settingsDoc&&settingsDoc.palette)||undefined,tariffs};
+  if(!S.termStart||!S.termEnd||S.termEnd<S.termStart){msg.dataset.kind='err';msg.textContent='Set a term end date after the start date.';return}
+  if(!tariffs.length){msg.dataset.kind='err';msg.textContent='Add at least one tariff row with a start date.';return}
+  if(!tariffs.some(t=>t.eRate||t.gRate)){msg.dataset.kind='err';msg.textContent='Enter your unit rates (pence per kWh) from your bill.';return}
+  if(S.seasonal&&!S.weatherPlace){msg.dataset.kind='err';msg.textContent='Enter your town or city, so the forecast can use the local weather.';$('sPlace').focus();return}
+  const refetch=!settingsDoc||settingsDoc.weatherPlace!==S.weatherPlace||settingsDoc.termStart!==S.termStart||settingsDoc.termEnd!==S.termEnd||settingsDoc.seasonal!==S.seasonal;
+  settingsDoc=S;queueSave();
+  if(document.body.classList.contains('setup'))return finishSetup();
+  msg.dataset.kind='ok';msg.textContent='Saved';
+  if(refetch&&viewTerm<0){weather=null;loadWeather()}else render()});
+
+// ---------- entry form ----------
+function readHintText(){const e=latestReading('e'),g=latestReading('g');
+  if(!e&&!g)return 'Enter what your meters show. The first reading is a starting point, and usage appears from the next one. Leave a meter blank to skip it.';
+  return 'Last readings: '+[e&&`electricity ${fmtRead(e)} on ${fmtDate(e.date)}`,g&&`gas ${fmtRead(g)} on ${fmtDate(g.date)}`].filter(Boolean).join('; ')+'. Leave a meter blank to skip it.'}
+function setMode(m){if(m==='read'&&editingId){mode=m;resetForm();return}
+  mode=m;$('modeDay').setAttribute('aria-pressed',m==='day');$('modePeriod').setAttribute('aria-pressed',m==='period');$('modeRead').setAttribute('aria-pressed',m==='read');
+  $('dayRow').hidden=m!=='day';$('periodRow').hidden=m!=='period';$('periodHint').hidden=m!=='period';$('readRow').hidden=m!=='read';$('readHint').hidden=m!=='read';
+  $('inSeg').hidden=m==='read';if(m==='read'){if(inMode!=='kwh')setIn('kwh');$('readHint').textContent=readHintText()}
+  $('fElec').placeholder=$('fGas').placeholder=m==='read'?'Meter reading':'0.0';
+  $('saveEntry').textContent=editingId?'Save changes':m==='read'?'Add reading':'Add entry';
+  if(m==='period'&&!$('fFrom').value&&settingsDoc){const last=entries.map(e=>e.to).sort().pop();$('fFrom').value=last?toS(toD(last)+DAY):settingsDoc.termStart}}
+$('modeDay').onclick=()=>setMode('day');$('modePeriod').onclick=()=>setMode('period');$('modeRead').onclick=()=>setMode('read');
+function updateInLabels(){const g=inMode==='gbp';$('inKwh').setAttribute('aria-pressed',!g);$('inGbp').setAttribute('aria-pressed',g);$('gbpOpts').hidden=!g;
+  $('elecPre').hidden=!g;$('gasPre').hidden=!g;$('elecUnitLbl').hidden=g;$('gasUnitLbl').hidden=g;
+  $('elecUnitLbl').textContent='kWh';$('gasUnitLbl').textContent=gasInputUnit==='m3'?'m³':gasInputUnit==='ft3'?'ft³ (×100)':'kWh';
+  $('fElec').step=g?'0.01':'0.01';$('fGas').step=g?'0.01':'0.001'}
+function setIn(m){inMode=m;updateInLabels()}
+$('inKwh').onclick=()=>setIn('kwh');$('inGbp').onclick=()=>setIn('gbp');
+// £ → kWh: take off VAT and standing charge if included, then divide by the unit rate for those days.
+function gbpToKwh(amount,fuel,from,to,S,inclVat,inclStand){
+  const name=fuel==='e'?'electricity':'gas';let ex=inclVat?amount/(1+vatOf(S)/100):amount,stand=0,rate=0,n=0;
+  for(let t=toD(from);t<=toD(to);t+=DAY){const T=tariffFor(S,toS(t));stand+=(fuel==='e'?T.eStand:T.gStand)/100;rate+=(fuel==='e'?T.eRate:T.gRate);n++}
+  if(!rate)return {err:`Set your ${name} unit rate under Tariffs & cap first.`};
+  if(inclStand)ex-=stand;
+  if(ex<-0.005)return {err:`The ${name} amount is less than its standing charge for those days (${gbp(stand*(inclVat?1+vatOf(S)/100:1))}). Untick “include the standing charge” if it doesn’t.`};
+  return {kwh:Math.max(0,ex)/(rate/n/100)}}
+$('fDate').value=TODAY;$('fRDate').value=TODAY;
+function resetForm(){editingId=null;$('cancelEdit').hidden=true;$('fElec').value='';$('fGas').value='';$('fFrom').value='';$('fTo').value='';$('fDate').value=TODAY;$('fRDate').value=TODAY;setMode(mode)}
+$('cancelEdit').onclick=()=>{resetForm();$('entryMsg').textContent=''};
+function addReading(ev,gv,msg){const S=settingsDoc,date=$('fRDate').value,err=t=>{msg.dataset.kind='err';msg.textContent=t};
+  if(!date)return err('Pick the date the reading was taken.');
+  if(date>TODAY)return err('A reading can’t be in the future.');
+  if(ev===''&&gv==='')return err('Enter at least one meter reading.');
+  if((ev!==''&&!(+ev>=0))||(gv!==''&&!(+gv>=0)))return err('Enter the numbers as your meter shows them.');
+  const add=[],made=[],stamp=Date.now();
+  for(const [f,v] of [['e',ev],['g',gv]]){if(v==='')continue;
+    const val=+v,unit=f==='e'?'kWh':gasInputUnit,prev=latestReading(f),name=f==='e'?'electricity':'gas',id='r'+stamp+f;
+    if(prev){if(date<=prev.date)return err(`Your last ${name} reading was on ${fmtDateY(prev.date)}. A new one has to be later than that.`);
+      if((prev.unit||'kWh')!==unit)return err(`Your last gas reading was in ${unitLabel(prev.unit)}, but the gas meter is now set to ${unitLabel(unit)}. Change it back under Tariff & cap, or delete that reading.`);
+      if(val<prev.value)return err(`That’s lower than your last ${name} reading (${fmtRead(prev)}). Meters only count up, so check the number.`);
+      const used=val-prev.value,k=f==='e'?used:gasToKwh(used,unit,S.gasCV||39.5);
+      made.push({id:'l'+stamp+f,from:toS(toD(prev.date)+DAY),to:date,elec:f==='e'?+k.toFixed(3):null,gas:f==='g'?+k.toFixed(3):null,gasRaw:f==='g'?+used.toFixed(3):null,gasUnit:f==='g'?unit:'kWh',gbp:null,reading:id,updated:new Date().toISOString()})}
+    add.push({id,fuel:f,date,value:val,unit})}
+  readings.push(...add);entries.push(...made);queueSave();render();
+  msg.dataset.kind='ok';msg.textContent=made.length?'Reading added: '+made.map(x=>x.elec!=null?`${kwh(x.elec)} kWh electricity`:`${kwh(x.gas)} kWh gas`).join(', ')+' since the last one':'Starting reading saved. Usage appears from your next reading.';
+  $('fElec').value='';$('fGas').value='';$('readHint').textContent=readHintText()}
+$('entryForm').addEventListener('submit',async e=>{e.preventDefault();const msg=$('entryMsg');const S=settingsDoc;if(!S)return;
+  if(mode==='read')return addReading($('fElec').value.trim(),$('fGas').value.trim(),msg);
+  const from=mode==='day'?$('fDate').value:$('fFrom').value,to=mode==='day'?$('fDate').value:$('fTo').value;
+  const ev=$('fElec').value.trim(),gv=$('fGas').value.trim();
+  if(!from||!to){msg.dataset.kind='err';msg.textContent='Pick the date'+(mode==='day'?'':'s')+'.';return}
+  if(to<from){msg.dataset.kind='err';msg.textContent='The “to” date must be on or after the “from” date.';return}
+  if(ev===''&&gv===''){msg.dataset.kind='err';msg.textContent='Enter electricity, gas or both.';return}
+  if((ev!==''&&+ev<0)||(gv!==''&&+gv<0)){msg.dataset.kind='err';msg.textContent='Amounts can’t be negative.';return}
+  let doc;
+  if(inMode==='gbp'){
+    if(!settingsDoc){msg.dataset.kind='err';msg.textContent='Save your tariffs under Tariffs & cap first, so pounds can be turned into kWh.';return}
+    const iv=$('fInclVat').checked,is=$('fInclStand').checked;let ek=null,gk=null;
+    if(ev!==''){const r=gbpToKwh(+ev,'e',from,to,S,iv,is);if(r.err){msg.dataset.kind='err';msg.textContent=r.err;return}ek=+r.kwh.toFixed(3)}
+    if(gv!==''){const r=gbpToKwh(+gv,'g',from,to,S,iv,is);if(r.err){msg.dataset.kind='err';msg.textContent=r.err;return}gk=+r.kwh.toFixed(3)}
+    doc={from,to,elec:ek,gas:gk,gasRaw:null,gasUnit:'kWh',gbp:{elec:ev===''?null:+ev,gas:gv===''?null:+gv,vat:iv,stand:is},updated:new Date().toISOString()};
+  }else doc={from,to,elec:ev===''?null:+ev,gas:gv===''?null:+gasToKwh(+gv,gasInputUnit,S.gasCV||39.5).toFixed(3),gasRaw:gv===''?null:+gv,gasUnit:gasInputUnit,gbp:null,updated:new Date().toISOString()};
+  if(editingId){const i=entries.findIndex(x=>x.id===editingId);if(i>=0)entries[i]={id:editingId,...doc}}else entries.push({id:'l'+Date.now(),...doc});
+  queueSave();render();
+  msg.dataset.kind='ok';msg.textContent=editingId?'Entry updated':'Entry added';
+  const wasPeriod=mode==='period';resetForm();if(wasPeriod){$('fFrom').value=toS(toD(to)+DAY)}});
+$('entriesBox').addEventListener('click',async e=>{const btn=e.target.closest('button[data-act]');if(!btn)return;const wrap=btn.parentElement,id=wrap.dataset.id;const en=entries.find(x=>x.id===id);if(!en)return;
+  if(btn.dataset.act==='edit'){showTab('overview');editingId=id;const single=en.from===en.to;setMode(single?'day':'period');if(single)$('fDate').value=en.from;else{$('fFrom').value=en.from;$('fTo').value=en.to}
+    if(en.gbp){setIn('gbp');$('fElec').value=en.gbp.elec??'';$('fGas').value=en.gbp.gas??'';$('fInclVat').checked=!!en.gbp.vat;$('fInclStand').checked=!!en.gbp.stand}
+    else{setIn('kwh');$('fElec').value=en.elec??'';$('fGas').value=en.gasRaw!=null&&en.gasUnit===gasInputUnit?en.gasRaw:(en.gas??'')}$('saveEntry').textContent='Save changes';$('cancelEdit').hidden=false;$('entryMsg').textContent='';$('fElec').focus();document.getElementById('logCard').scrollIntoView({behavior:'smooth',block:'start'})}
+  else if(btn.dataset.act==='del'){wrap.innerHTML='<button class="btn danger small" data-act="confirm">Confirm delete</button> <button class="btn ghost small" data-act="keep">Keep</button>';wrap.dataset.id=id}
+  else if(btn.dataset.act==='keep'){render()}
+  else if(btn.dataset.act==='confirm'){entries=entries.filter(x=>x.id!==id);if(editingId===id)resetForm();queueSave();render()}});
+
+// ---------- palette ----------
+function applyPalette(p){p=p||'auto';if(!['auto','light','dark'].includes(p))p='auto';if(p==='auto')document.documentElement.removeAttribute('data-palette');else document.documentElement.setAttribute('data-palette',p);$('themeSel').value=p}
+$('themeSel').addEventListener('change',e=>{const p=e.target.value;applyPalette(p);try{localStorage.setItem('het-pal',p)}catch(err){}
+  if(settingsDoc){settingsDoc.palette=p;queueSave()}});
+// ---------- dropdowns ----------
+// WebKitGTK draws <select> and its pop-up list with GTK widgets, so each one is replaced by a button and a listbox
+// drawn by the page. The real <select> stays (hidden) as the source of truth: code still reads and sets .value and
+// listens for 'change' on it.
+let ddOpen=null;
+function ddClose(focusBtn){if(!ddOpen)return;const o=ddOpen;ddOpen=null;o.menu.remove();o.btn.setAttribute('aria-expanded','false');if(focusBtn)o.btn.focus()}
+function enhanceSelect(sel,n){
+  const btn=document.createElement('button');btn.type='button';btn.className='dd-btn';btn.id='dd-'+(sel.id||n);
+  btn.setAttribute('aria-haspopup','listbox');btn.setAttribute('aria-expanded','false');
+  const al=sel.getAttribute('aria-label');if(al)btn.setAttribute('aria-label',al);
+  sel.hidden=true;sel.tabIndex=-1;sel.before(btn);
+  const sync=()=>{const o=sel.options[sel.selectedIndex];btn.textContent=o?o.textContent:''};
+  const d=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value');
+  Object.defineProperty(sel,'value',{configurable:true,get(){return d.get.call(sel)},set(v){d.set.call(sel,v);sync()}});
+  sel.addEventListener('change',sync);sync();
+  const pick=v=>{if(v!==sel.value){sel.value=v;sel.dispatchEvent(new Event('change',{bubbles:true}))}};
+  function open(){
+    if(ddOpen)ddClose(false);if(dpOpen)dpClose(false);
+    const menu=document.createElement('ul');menu.className='dd-menu';menu.setAttribute('role','listbox');menu.tabIndex=-1;menu.id=btn.id+'-list';
+    const lab=sel.closest('label');if(lab||al)menu.setAttribute('aria-label',al||lab.firstChild.textContent.trim());
+    const items=[...sel.options].map((o,i)=>{const li=document.createElement('li');li.setAttribute('role','option');li.id=menu.id+'-'+i;li.dataset.v=o.value;li.textContent=o.textContent;
+      li.setAttribute('aria-selected',o.value===sel.value);menu.append(li);return li});
+    let act=Math.max(0,sel.selectedIndex);
+    const setAct=i=>{act=(i+items.length)%items.length;items.forEach((li,k)=>li.classList.toggle('active',k===act));menu.setAttribute('aria-activedescendant',items[act].id);items[act].scrollIntoView({block:'nearest'})};
+    document.body.append(menu);
+    const r=btn.getBoundingClientRect(),vw=document.documentElement.clientWidth,vh=window.innerHeight;
+    menu.style.minWidth=r.width+'px';
+    const mw=menu.offsetWidth,mh=menu.offsetHeight;
+    menu.style.left=Math.max(8,Math.min(r.left,vw-mw-8))+'px';
+    menu.style.top=(r.bottom+4+mh>vh-8&&r.top-4-mh>8?r.top-4-mh:r.bottom+4)+'px';
+    setAct(act);
+    menu.addEventListener('mousemove',e=>{const li=e.target.closest('li');if(li)setAct(items.indexOf(li))});
+    menu.addEventListener('click',e=>{const li=e.target.closest('li');if(!li)return;pick(li.dataset.v);ddClose(true)});
+    menu.addEventListener('keydown',e=>{
+      if(e.key==='ArrowDown'){e.preventDefault();setAct(act+1)}
+      else if(e.key==='ArrowUp'){e.preventDefault();setAct(act-1)}
+      else if(e.key==='Home'){e.preventDefault();setAct(0)}
+      else if(e.key==='End'){e.preventDefault();setAct(items.length-1)}
+      else if(e.key==='Enter'||e.key===' '){e.preventDefault();pick(items[act].dataset.v);ddClose(true)}
+      else if(e.key==='Escape'){e.preventDefault();ddClose(true)}
+      else if(e.key==='Tab'){ddClose(false)}
+      else if(e.key.length===1){const k=e.key.toLowerCase(),f=items.findIndex((li,i)=>i>act&&li.textContent.toLowerCase().startsWith(k));const g=f>=0?f:items.findIndex(li=>li.textContent.toLowerCase().startsWith(k));if(g>=0)setAct(g)}});
+    btn.setAttribute('aria-expanded','true');btn.setAttribute('aria-controls',menu.id);
+    ddOpen={btn,menu};menu.focus({preventScroll:true});
+  }
+  btn.addEventListener('click',e=>{e.preventDefault();if(ddOpen&&ddOpen.btn===btn)ddClose(true);else open()});
+  btn.addEventListener('keydown',e=>{if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();open()}});
+}
+document.querySelectorAll('select').forEach(enhanceSelect);
+
+// ---------- date fields ----------
+// Same idea as the dropdowns: the real <input type="date"> stays hidden and holds the ISO value; a text box shows
+// dd/mm/yyyy (typing works) and a calendar opens from the button. Weeks start on Monday.
+let dpOpen=null;
+function dpClose(focus){if(!dpOpen)return;const o=dpOpen;dpOpen=null;o.pop.remove();o.btn.setAttribute('aria-expanded','false');if(focus)o.txt.focus()}
+const isoOf=(y,m,d)=>`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+const ukOf=v=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(v||''))return '';const [y,m,d]=v.split('-');return `${d}/${m}/${y}`};
+// '' for blank, null for something that isn't a date
+function parseUK(t){t=t.trim();if(!t)return '';let m=t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/),y,mo,d;
+  if(m){y=+m[1];mo=+m[2];d=+m[3]}else{m=t.match(/^(\d{1,2})[\/.\- ](\d{1,2})[\/.\- ](\d{2}|\d{4})$/);if(!m)return null;d=+m[1];mo=+m[2];y=+m[3];if(y<100)y+=2000}
+  if(mo<1||mo>12||d<1||d>dim(y,mo-1))return null;return isoOf(y,mo-1,d)}
+const CAL_SVG='<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3"/></svg>';
+const WK2=['Mo','Tu','We','Th','Fr','Sa','Su'];
+function enhanceDate(inp){
+  if(inp.dataset.enh)return;inp.dataset.enh='1';
+  const wrap=document.createElement('span');wrap.className='dp';
+  const txt=document.createElement('input');txt.type='text';txt.className='dp-text';txt.dataset.ui='1';txt.placeholder='dd/mm/yyyy';txt.autocomplete='off';txt.spellcheck=false;
+  const btn=document.createElement('button');btn.type='button';btn.className='dp-btn';btn.innerHTML=CAL_SVG;btn.setAttribute('aria-haspopup','dialog');btn.setAttribute('aria-expanded','false');
+  const lab=inp.closest('label'),name=lab&&lab.firstChild&&lab.firstChild.nodeType===3?lab.firstChild.textContent.trim():'Date';
+  btn.setAttribute('aria-label','Open calendar: '+name);
+  inp.before(wrap);wrap.append(txt,inp,btn);inp.hidden=true;inp.tabIndex=-1;
+  const d=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value');
+  const sync=()=>{txt.value=ukOf(d.get.call(inp));txt.removeAttribute('aria-invalid')};
+  Object.defineProperty(inp,'value',{configurable:true,get(){return d.get.call(inp)},set(v){d.set.call(inp,v);sync()}});
+  sync();
+  const commit=v=>{const old=d.get.call(inp);d.set.call(inp,v);sync();if(v!==old){inp.dispatchEvent(new Event('input',{bubbles:true}));inp.dispatchEvent(new Event('change',{bubbles:true}))}};
+  const fromText=()=>{const v=parseUK(txt.value);if(v===null){txt.setAttribute('aria-invalid','true');return false}commit(v);return true};
+  txt.addEventListener('change',fromText);
+  txt.addEventListener('keydown',e=>{if(e.key==='Enter'){if(!fromText())e.preventDefault()}else if(e.key==='ArrowDown'){e.preventDefault();open()}});
+  function open(){
+    if(dpOpen){const same=dpOpen.btn===btn;dpClose(false);if(same)return}
+    if(ddOpen)ddClose(false);
+    let act=parseUK(txt.value)||d.get.call(inp)||TODAY,vy=+act.slice(0,4),vm=+act.slice(5,7)-1;
+    const pop=document.createElement('div');pop.className='dp-pop';pop.setAttribute('role','dialog');pop.setAttribute('aria-label','Choose '+name.toLowerCase());
+    pop.innerHTML=`<div class="dp-head"><button type="button" class="dp-nav" data-k="-1" aria-label="Previous month">‹</button><span class="dp-ttl" aria-live="polite"></span><button type="button" class="dp-nav" data-k="1" aria-label="Next month">›</button></div>`+
+      `<table class="dp-grid" role="grid"><thead><tr>${WK2.map(w=>`<th scope="col">${w}</th>`).join('')}</tr></thead><tbody></tbody></table>`+
+      `<div class="dp-foot"><button type="button" class="btn ghost small" data-a="today">Today</button><button type="button" class="btn ghost small" data-a="clear">Clear</button></div>`;
+    const draw=focus=>{const sel=d.get.call(inp),off=(new Date(Date.UTC(vy,vm,1)).getUTCDay()+6)%7,start=Date.UTC(vy,vm,1)-off*DAY;
+      pop.querySelector('.dp-ttl').textContent=`${MONL[vm]} ${vy}`;
+      let h='';for(let r=0;r<6;r++){h+='<tr>';for(let c=0;c<7;c++){const t=start+(r*7+c)*DAY,s=toS(t),dt=new Date(t);
+        h+=`<td><button type="button" class="dp-day${dt.getUTCMonth()!==vm?' out':''}${s===TODAY?' today':''}" data-d="${s}" tabindex="${s===act?0:-1}" aria-pressed="${s===sel}" aria-label="${dt.getUTCDate()} ${MONL[dt.getUTCMonth()]} ${dt.getUTCFullYear()}${s===TODAY?', today':''}">${dt.getUTCDate()}</button></td>`}h+='</tr>'}
+      pop.querySelector('tbody').innerHTML=h;if(focus){const b=pop.querySelector(`.dp-day[data-d="${act}"]`);if(b)b.focus()}};
+    const go=(iso,focus)=>{act=iso;vy=+iso.slice(0,4);vm=+iso.slice(5,7)-1;draw(focus)};
+    pop.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+      if(b.dataset.d){commit(b.dataset.d);dpClose(true)}
+      else if(b.dataset.k)go(addMonths(act,+b.dataset.k),false)
+      else if(b.dataset.a==='today'){commit(TODAY);dpClose(true)}
+      else if(b.dataset.a==='clear'){commit('');dpClose(true)}});
+    pop.addEventListener('keydown',e=>{
+      if(e.key==='Escape'){e.preventDefault();dpClose(true);return}
+      const b=e.target.closest('.dp-day');if(!b)return;
+      const t=toD(act),wd=(new Date(t).getUTCDay()+6)%7;let n=null;
+      switch(e.key){case 'ArrowLeft':n=toS(t-DAY);break;case 'ArrowRight':n=toS(t+DAY);break;case 'ArrowUp':n=toS(t-7*DAY);break;case 'ArrowDown':n=toS(t+7*DAY);break;
+        case 'Home':n=toS(t-wd*DAY);break;case 'End':n=toS(t+(6-wd)*DAY);break;
+        case 'PageUp':n=addMonths(act,e.shiftKey?-12:-1);break;case 'PageDown':n=addMonths(act,e.shiftKey?12:1);break;
+        case 'Enter':case ' ':e.preventDefault();commit(b.dataset.d);dpClose(true);return}
+      if(n){e.preventDefault();go(n,true)}});
+    pop.addEventListener('focusout',e=>{const r=e.relatedTarget;if(dpOpen&&dpOpen.pop===pop&&r&&!pop.contains(r)&&r!==btn&&r!==txt)dpClose(false)});
+    document.body.append(pop);draw(false);
+    const rc=wrap.getBoundingClientRect(),vw=document.documentElement.clientWidth,vh=window.innerHeight,pw=pop.offsetWidth,ph=pop.offsetHeight;
+    pop.style.left=Math.max(8,Math.min(rc.right-pw,vw-pw-8))+'px';
+    pop.style.top=(rc.bottom+4+ph>vh-8&&rc.top-4-ph>8?rc.top-4-ph:rc.bottom+4)+'px';
+    btn.setAttribute('aria-expanded','true');dpOpen={pop,btn,txt};draw(true);
+  }
+  btn.addEventListener('click',e=>{e.preventDefault();open()});
+}
+
+// ---------- number fields ----------
+const CHEV=up=>`<svg viewBox="0 0 10 6" width="8" height="5" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="${up?'M1 5l4-4 4 4':'M1 1l4 4 4-4'}"/></svg>`;
+function enhanceNumber(inp){
+  if(inp.dataset.enh)return;inp.dataset.enh='1';
+  let host=inp.parentElement;if(!host.classList.contains('unit')){host=document.createElement('span');host.className='unit';inp.before(host);host.append(inp)}
+  host.classList.add('has-spin');
+  const sp=document.createElement('span');sp.className='spin';
+  sp.innerHTML=`<button type="button" tabindex="-1" data-k="1" aria-label="Increase">${CHEV(true)}</button><button type="button" tabindex="-1" data-k="-1" aria-label="Decrease">${CHEV(false)}</button>`;
+  host.append(sp);
+  let timer=null;
+  const step=k=>{try{k>0?inp.stepUp():inp.stepDown()}catch(err){return}inp.dispatchEvent(new Event('input',{bubbles:true}));inp.dispatchEvent(new Event('change',{bubbles:true}))};
+  const stop=()=>{clearTimeout(timer);timer=null};
+  sp.addEventListener('pointerdown',e=>{const b=e.target.closest('button');if(!b||e.button!==0)return;e.preventDefault();inp.focus();stop();const k=+b.dataset.k;step(k);
+    const again=ms=>{timer=setTimeout(()=>{step(k);again(60)},ms)};again(450)});
+  ['pointerup','pointerleave','pointercancel'].forEach(t=>sp.addEventListener(t,stop));
+}
+function enhanceInputs(root){root.querySelectorAll('input[type="date"]').forEach(enhanceDate);root.querySelectorAll('input[type="number"]').forEach(enhanceNumber)}
+enhanceInputs(document);
+
+document.addEventListener('mousedown',e=>{
+  if(ddOpen&&!ddOpen.menu.contains(e.target)&&!ddOpen.btn.contains(e.target))ddClose(false);
+  if(dpOpen&&!dpOpen.pop.contains(e.target)&&!dpOpen.btn.contains(e.target))dpClose(false)});
+window.addEventListener('resize',()=>{ddClose(false);dpClose(false)});
+document.addEventListener('scroll',e=>{if(ddOpen&&!ddOpen.menu.contains(e.target))ddClose(false);if(dpOpen&&!dpOpen.pop.contains(e.target))dpClose(false)},true);
+try{applyPalette(localStorage.getItem('het-pal')||'auto')}catch(e){applyPalette('auto')}
+
+// ---------- tabs ----------
+function showTab(t){const pt=$('pageTitle');if(pt)pt.textContent={overview:'Account overview',entries:'Usage history',settings:'Tariff & cap'}[t]||'';document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));
+  document.querySelectorAll('[data-panel]').forEach(p=>p.hidden=p.dataset.panel!==t);try{localStorage.setItem('het-tab',t)}catch(e){}}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+document.querySelector('.tabs').addEventListener('keydown',e=>{if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft')return;const bs=[...document.querySelectorAll('.tabs button')];let i=bs.findIndex(b=>b.getAttribute('aria-selected')==='true');i=(i+(e.key==='ArrowRight'?1:bs.length-1))%bs.length;showTab(bs[i].dataset.tab);bs[i].focus()});
+try{const t=localStorage.getItem('het-tab');if(t&&document.querySelector(`[data-panel="${t}"]`))showTab(t)}catch(e){}
+function openMonth(i){chartMonth=i;render()}
+document.querySelectorAll('[data-fuel]').forEach(b=>b.onclick=()=>{chartFuel=b.dataset.fuel;try{localStorage.setItem('het-fuel',chartFuel)}catch(e){}render()});
+document.querySelectorAll('[data-unit]').forEach(b=>b.onclick=()=>{chartUnit=b.dataset.unit;try{localStorage.setItem('het-unit',chartUnit)}catch(e){}render()});
+$('chart').addEventListener('click',e=>{const h=e.target.closest('.hit[data-mi]');if(h)openMonth(+h.dataset.mi)});
+$('chart').addEventListener('keydown',e=>{const h=e.target.closest('.hit[data-mi]');if(h&&(e.key==='Enter'||e.key===' ')){e.preventDefault();openMonth(+h.dataset.mi);$('chartNav').querySelector('[data-nav="back"]').focus()}});
+$('chartNav').addEventListener('click',e=>{const b=e.target.closest('[data-nav]');if(!b||chartMonth==null)return;const a=b.dataset.nav;
+  if(a==='back'){const k=chartMonth;openMonth(null);const h=$('chart').querySelector(`.hit[data-mi="${k}"]`);if(h)h.focus()}else openMonth(chartMonth+(a==='next'?1:-1))});
+$('chart').closest('.card').addEventListener('keydown',e=>{if(chartMonth==null||e.target.matches('input,select,textarea'))return;
+  if(e.key==='Escape'){e.preventDefault();$('chartNav').querySelector('[data-nav="back"]').click()}
+  else if(e.key==='ArrowLeft'||e.key==='ArrowRight'){const b=$('chartNav').querySelector(`[data-nav="${e.key==='ArrowLeft'?'prev':'next'}"]`);if(!b.disabled){e.preventDefault();b.click()}}});
+$('monthsTbl').addEventListener('click',e=>{const tr=e.target.closest('tr[data-mi]');if(!tr)return;openMonth(+tr.dataset.mi);$('chart').closest('.card').scrollIntoView({behavior:'smooth',block:'start'})});
+document.addEventListener('click',e=>{const a=e.target.closest('[data-goto]');if(a){e.preventDefault();showTab(a.dataset.goto)}});
+
+// ---------- boot ----------
+// The page stays on "Loading your data…" until the data (and, briefly, the weather) are in, so the first
+// figures shown are the real ones. With no settings yet it opens the setup form instead.
+function bootFail(title,detail){document.body.classList.remove('loading');document.body.classList.add('fatal');
+  $('bootH').textContent=title;$('bootErr').textContent=detail;$('bootActs').hidden=false}
+$('bootRetry').onclick=()=>location.reload();
+function enterSetup(){document.body.classList.add('setup');document.body.classList.remove('loading');fillSettings();showTab('settings');
+  $('saveSettings').textContent='Start tracking';$('termLine').textContent='Not set up yet'}
+function finishSetup(){document.body.classList.remove('setup');$('saveSettings').textContent='Save settings';fillSettings();showTab('overview');render();loadWeather()}
+(async()=>{
+  let o=null,r;
+  try{r=await fetch('/api/data',{cache:'no-store'});o=await r.json().catch(()=>null)}
+  catch(e){return bootFail('House Energy Tracker isn’t running','This page is shown by the app. Open House Energy Tracker from your app menu, Start menu or Applications folder.')}
+  if(!r.ok||!o||!Array.isArray(o.entries))return bootFail('Couldn’t open your data',(o&&o.error)||`The app answered with an error (${r.status}).`);
+  applyData(o);startApp();setAppStatus('Saving automatically to '+dataPath);
+  if(!settingsDoc)return enterSetup();
+  fillSettings();
+  await Promise.race([loadWeather(),new Promise(res=>setTimeout(res,5000))]);
+  document.body.classList.remove('loading');render();
+})();
+})();
+</script>
+
+</body>
+</html>
