@@ -1,19 +1,10 @@
-# personal data and caches: never commit
-energy-data.json
-energy-data.json.bak
-energy-data.json.unreadable-*
-*.json.bak
-weather-cache.json
+# your data, its backups, weather cache and log: never commit
+/energy-data.json*
 *.weather-cache.json
-energy-tracker.log
-__pycache__/
-# old single-file builds, if any are kept locally
-energy_tracker.py.before-*
-# Rust build output, and the built binary copied next to app.html
+*.log
+# build output and release files
 /target/
-/energy-tracker
-/energy-tracker.exe
-/energy-tracker.new
 /dist/
-# a damaged repo copy kept aside locally
-/.git-broken-*/
+# the Linux binary, copied next to app.html after a build
+/energy-tracker
+/energy-tracker.new
