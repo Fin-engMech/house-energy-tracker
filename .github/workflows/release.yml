@@ -25,7 +25,7 @@ jobs:
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
       - name: Check the tag matches Cargo.toml
@@ -45,7 +45,7 @@ jobs:
           $v = $env:TAG.TrimStart('v')
           Copy-Item target\x86_64-pc-windows-msvc\release\energy-tracker.exe "dist\House-Energy-Tracker-$v-portable.exe"
           Get-ChildItem dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows
           path: dist/*.exe
@@ -54,13 +54,13 @@ jobs:
   macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
       - run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
       - name: Build the .app and .dmg (Apple silicon + Intel, signed ad hoc)
         run: sh packaging/macos/make-app.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: macos
           path: dist/*.dmg
@@ -70,7 +70,7 @@ jobs:
     # The oldest supported Ubuntu, so the binary also runs on older glibc.
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
       - name: Install GTK and WebKitGTK
@@ -84,7 +84,7 @@ jobs:
           mkdir -p "dist/$d"
           cp target/release/energy-tracker README.md LICENSE "dist/$d/"
           tar -C dist -czf "dist/$d.tar.gz" "$d"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: linux
           path: dist/*.tar.gz
@@ -92,9 +92,9 @@ jobs:
 
   release:
     needs: [windows, macos, linux]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: out
           merge-multiple: true
