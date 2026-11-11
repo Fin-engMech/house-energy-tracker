@@ -1,0 +1,37 @@
+# Builds and tests on Windows, macOS and Linux for every push and pull request.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+          - os: macos-latest
+          - os: windows-latest
+            target: --target x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install GTK and WebKitGTK
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+      - name: Test
+        run: cargo test --locked ${{ matrix.target }}
+      - name: Check the page's script
+        if: runner.os == 'Linux'
+        run: |
+          awk '/<script>/{f=1;next}/<\/script>/{f=0}f' app.html > /tmp/app.js
+          node --check /tmp/app.js

@@ -4,6 +4,8 @@ A small desktop app for renters on a capped energy bill. Log your gas and electr
 billing period or from meter readings) and it tells you whether you're on course to stay under the cap,
 how much heating you have room for this month, and a daily kWh target for each fuel.
 
+![The Overview tab: projected bill against the cap, monthly usage chart with allowances, and daily kWh targets](docs/screenshot.png)
+
 - Forecasts the rest of the term from your own usage and the weather where you live (actual temperatures,
   the 16-day forecast, then your town's typical weather), so colder months get more of the allowance.
 - Caps per term, per month with carry-over, or per month with each month separate. Tariff changes,
@@ -77,6 +79,21 @@ Packages:
 - **Arch Linux**: `packaging/arch/PKGBUILD`.
 
 The version number lives only in `Cargo.toml`; the installer, the macOS bundle and the Arch package read it from there.
+
+### Releases
+
+GitHub Actions builds every download. `ci.yml` runs the tests on Windows, macOS and Linux for each push.
+`release.yml` runs when a version tag is pushed: it builds the Windows installer and portable exe, the macOS
+`.dmg` and a Linux `.tar.gz`, and attaches them to the release (creating it if needed). To release:
+
+```sh
+# after changing version in Cargo.toml and committing
+git tag v1.1.0
+git push origin main v1.1.0
+```
+
+The tag must match the version in `Cargo.toml`. To add the files to an existing release, run the
+**Release** workflow from the Actions tab and give it the tag.
 
 ### Signing (before giving it to other people)
 

@@ -1,0 +1,108 @@
+# Builds the downloads for Windows, macOS and Linux and attaches them to a GitHub release.
+#
+# Runs when you push a version tag (git tag v1.1.0 && git push origin v1.1.0), or by hand from the
+# Actions tab ("Run workflow"), giving the tag of an existing release, e.g. to add files to it.
+# The tag must match the version in Cargo.toml.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to build and upload to, e.g. v1.0.0"
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+  CARGO_TERM_COLOR: always
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - name: Check the tag matches Cargo.toml
+        shell: bash
+        run: |
+          v=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          [ "v$v" = "$TAG" ] || { echo "Tag $TAG doesn't match Cargo.toml version $v"; exit 1; }
+      - run: rustup target add x86_64-pc-windows-msvc
+      - name: Build
+        run: cargo build --release --locked --target x86_64-pc-windows-msvc
+      - name: Installer and portable exe
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /Q packaging\windows\installer.iss
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $v = $env:TAG.TrimStart('v')
+          Copy-Item target\x86_64-pc-windows-msvc\release\energy-tracker.exe "dist\House-Energy-Tracker-$v-portable.exe"
+          Get-ChildItem dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/*.exe
+          if-no-files-found: error
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+      - name: Build the .app and .dmg (Apple silicon + Intel, signed ad hoc)
+        run: sh packaging/macos/make-app.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: dist/*.dmg
+          if-no-files-found: error
+
+  linux:
+    # The oldest supported Ubuntu, so the binary also runs on older glibc.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - name: Install GTK and WebKitGTK
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+      - name: Build
+        run: cargo build --release --locked
+      - name: Package
+        run: |
+          v=${TAG#v}
+          d="House-Energy-Tracker-$v-linux-x86_64"
+          mkdir -p "dist/$d"
+          cp target/release/energy-tracker README.md LICENSE "dist/$d/"
+          tar -C dist -czf "dist/$d.tar.gz" "$d"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  release:
+    needs: [windows, macos, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: Create the release if needed, then attach the files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          ls -l out
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "House Energy Tracker ${TAG#v}" --generate-notes
+          gh release upload "$TAG" out/* --clobber
