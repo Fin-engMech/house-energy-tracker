@@ -15,12 +15,22 @@ how much heating you have room for this month, and a daily kWh target for each f
 It runs entirely on your computer. The only thing sent anywhere is your town's name and the term dates,
 to [Open-Meteo](https://open-meteo.com/) for the weather (free, no account).
 
+## Download
+
+**Windows 10/11** (version 1.0.0):
+
+- [**Installer**](https://github.com/Fin-engMech/house-energy-tracker/releases/download/v1.0.0/House-Energy-Tracker-Setup-1.0.0.exe) (recommended): adds a Start menu shortcut and an uninstaller
+- [**Portable**](https://github.com/Fin-engMech/house-energy-tracker/releases/download/v1.0.0/House-Energy-Tracker-1.0.0-portable.exe): nothing to install, just run it
+
+Newer versions, when there are any, are on the [releases page](https://github.com/Fin-engMech/house-energy-tracker/releases/latest).
+There's no ready-made download for macOS or Linux yet: build it from source (below).
+
 ## Install
 
 | System | How |
 |---|---|
-| Windows 10/11 | Run `House-Energy-Tracker-Setup-x.y.z.exe`. It installs for your user only, with no admin prompt. The window uses the Microsoft Edge WebView2 Runtime, which comes with Windows 11 and current Windows 10. If the installer isn't signed, SmartScreen says "Windows protected your PC": choose **More info › Run anyway**. |
-| macOS 11+ | Open the `.dmg` and drag **House Energy Tracker** onto the Applications folder beside it. If the build isn't notarised, macOS refuses to open it the first time: open **System Settings › Privacy & Security** and choose **Open Anyway**. |
+| Windows 10/11 | Run the installer. It installs for your user only, with no admin prompt. Or run the portable exe from anywhere (`--install` adds a Start menu shortcut for it). The window uses the Microsoft Edge WebView2 Runtime, which comes with Windows 11 and current Windows 10; the installer adds it if it's missing. The downloads aren't code-signed yet, so SmartScreen says "Windows protected your PC": choose **More info › Run anyway**. |
+| macOS 11+ | Build the `.dmg` on a Mac with `packaging/macos/make-app.sh`, open it and drag **House Energy Tracker** onto the Applications folder beside it. If the build isn't notarised, macOS refuses to open it the first time: open **System Settings › Privacy & Security** and choose **Open Anyway**. |
 | Arch Linux | `cd packaging/arch && makepkg -si` |
 | Other Linux | Build it (below), then run `./energy-tracker --install` to add it to your app menu. It needs WebKitGTK 4.1 (`webkit2gtk-4.1` / `libwebkit2gtk-4.1-0`). |
 
