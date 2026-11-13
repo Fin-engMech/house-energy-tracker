@@ -675,7 +675,7 @@ function model(S,E){
     // where the day's figure comes from: a single-day log, a period log split evenly, an estimate, or the forecast
     d.kind=d.logged?((d.ePer&&!d.eDay)||(d.gPer&&!d.gDay)?'period':'day'):d.past?'est':'fc';
     tot.e+=d.ec;tot.g+=d.gc;tot.st+=d.sc;tot.ex+=d.ex;tot.vat+=d.vat;tot.cost+=d.cost;tot.lo+=d.lo;tot.hi+=d.hi;
-    if(d.past){spent.cost+=d.cost;if(!d.logged){unlogged++;spent.est+=(d.ec+d.gc)*bf}}else{remDays++;remCost+=d.cost}}
+    if(d.past){spent.cost+=d.cost;if(!d.logged){unlogged++;spent.est+=d.cost}}else{remDays++;remCost+=d.cost}}
   tot.inc=tot.ex+tot.vat;
   // billing months are calendar months; the first and last of the term are part months
   const months=[];
