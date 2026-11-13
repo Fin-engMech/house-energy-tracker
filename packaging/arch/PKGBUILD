@@ -1,6 +1,6 @@
 # Builds a package from this checkout:   cd packaging/arch && makepkg -si
 pkgname=house-energy-tracker
-pkgver=1.0.0
+pkgver=1.0.1
 pkgrel=1
 pkgdesc="Track gas and electricity use against a capped energy bill"
 arch=('x86_64' 'aarch64')

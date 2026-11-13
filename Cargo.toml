@@ -1,6 +1,6 @@
 [package]
 name = "energy-tracker"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 description = "House Energy Tracker: local desktop app for tracking gas and electricity against a capped bill"
 license = "MIT"
