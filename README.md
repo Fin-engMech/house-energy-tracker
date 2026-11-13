@@ -19,14 +19,14 @@ to [Open-Meteo](https://open-meteo.com/) for the weather (free, no account).
 
 ## Download
 
-**Windows 10/11** (version 1.0.0):
+**Windows 10/11** (version 1.0.1):
 
-- [**Installer**](https://github.com/Fin-engMech/house-energy-tracker/releases/download/v1.0.0/House-Energy-Tracker-Setup-1.0.0.exe) (recommended): adds a Start menu shortcut and an uninstaller
-- [**Portable**](https://github.com/Fin-engMech/house-energy-tracker/releases/download/v1.0.0/House-Energy-Tracker-1.0.0-portable.exe): nothing to install, just run it
+- [**Installer**](https://github.com/Fin-engMech/house-energy-tracker/releases/download/v1.0.1/House-Energy-Tracker-Setup-1.0.1.exe) (recommended): adds a Start menu shortcut and an uninstaller
+- [**Portable**](https://github.com/Fin-engMech/house-energy-tracker/releases/download/v1.0.1/House-Energy-Tracker-1.0.1-portable.exe): nothing to install, just run it
 
-**macOS 11+** (Apple silicon and Intel): [**Disk image (.dmg)**](https://github.com/Fin-engMech/house-energy-tracker/releases/download/v1.0.0/House-Energy-Tracker-1.0.0.dmg)
+**macOS 11+** (Apple silicon and Intel): [**Disk image (.dmg)**](https://github.com/Fin-engMech/house-energy-tracker/releases/download/v1.0.1/House-Energy-Tracker-1.0.1.dmg)
 
-**Linux** (x86-64, needs WebKitGTK 4.1): [**Program (.tar.gz)**](https://github.com/Fin-engMech/house-energy-tracker/releases/download/v1.0.0/House-Energy-Tracker-1.0.0-linux-x86_64.tar.gz)
+**Linux** (x86-64, needs WebKitGTK 4.1): [**Program (.tar.gz)**](https://github.com/Fin-engMech/house-energy-tracker/releases/download/v1.0.1/House-Energy-Tracker-1.0.1-linux-x86_64.tar.gz)
 
 Newer versions, when there are any, are on the [releases page](https://github.com/Fin-engMech/house-energy-tracker/releases/latest).
 
