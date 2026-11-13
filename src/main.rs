@@ -224,18 +224,29 @@ fn running_build(port: u16) -> Option<String> {
 }
 
 /// How long a connection may sit waiting for the rest of a request, or for its response to be read.
+#[cfg(windows)]
 const CONNECTION_TIMEOUT: Duration = Duration::from_secs(20);
 
 /// Listen on 127.0.0.1:port, or None if something already has it.
 fn bind(port: u16) -> Option<std::sync::Arc<tiny_http::Server>> {
+    tiny_http::Server::from_listener(listener(port)?, None).ok().map(std::sync::Arc::new)
+}
+
+fn listener(port: u16) -> Option<std::net::TcpListener> {
     let listener = std::net::TcpListener::bind(("127.0.0.1", port)).ok()?;
     // tiny_http has no time limits of its own, so a client that stops halfway (a body that never comes,
     // a response never read) would hold two threads for ever. Accepted connections inherit these from
     // the listening socket, and tiny_http closes a connection whose read times out.
-    let sock = socket2::SockRef::from(&listener);
-    let _ = sock.set_read_timeout(Some(CONNECTION_TIMEOUT));
-    let _ = sock.set_write_timeout(Some(CONNECTION_TIMEOUT));
-    tiny_http::Server::from_listener(listener, None).ok().map(std::sync::Arc::new)
+    // Windows only: on Linux and macOS a receive timeout on the listening socket also makes accept()
+    // fail after that long with no new connection, and tiny_http's accept thread stops for good on any
+    // error, so the app went deaf after 20 s idle ("Lost contact with the app").
+    #[cfg(windows)]
+    {
+        let sock = socket2::SockRef::from(&listener);
+        let _ = sock.set_read_timeout(Some(CONNECTION_TIMEOUT));
+        let _ = sock.set_write_timeout(Some(CONNECTION_TIMEOUT));
+    }
+    Some(listener)
 }
 
 fn wait_until_stopped(port: u16) -> bool {
@@ -668,4 +679,18 @@ fn expand_user(p: &str) -> PathBuf {
         return paths::home().join(&p[1..].trim_start_matches(['/', '\\']));
     }
     PathBuf::from(p)
+}
+
+#[cfg(test)]
+mod tests {
+    // A receive timeout on the listening socket makes accept() itself time out on Linux and macOS,
+    // which stops tiny_http's accept thread for good. Only Windows may set one.
+    #[cfg(not(windows))]
+    #[test]
+    fn listener_has_no_accept_timeout() {
+        let l = super::listener(0).expect("bind a free port");
+        let sock = socket2::SockRef::from(&l);
+        assert_eq!(sock.read_timeout().unwrap(), None);
+        assert_eq!(sock.write_timeout().unwrap(), None);
+    }
 }
