@@ -188,6 +188,10 @@ table.tgt td,table.tgt th{padding:5px 6px}
 table.tgt tr.today td{background:var(--panel2);font-weight:600}
 table.tgt tr.today td:first-child{box-shadow:inset 2px 0 0 var(--ink)}
 table.tgt td b{font-weight:600}
+table.heat td:nth-child(3){white-space:normal;line-height:1.35}
+table.heat tr.now td{background:var(--panel2)}
+table.heat tr.now td:first-child{box-shadow:inset 2px 0 0 var(--ink)}
+.heat-head{margin:0 0 8px;font-size:12.5px;line-height:1.45}
 
 /* forms */
 label{display:flex;flex-direction:column;gap:3px;font-size:12px;font-weight:500;color:var(--muted);min-width:0}
@@ -283,6 +287,14 @@ table.tf tbody tr:hover td{background:none}
 .tariff-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;align-items:end;padding:10px;border:1px solid var(--line2);border-radius:5px;background:var(--panel2)}
 .tariff-row .from{grid-column:1/4}
 .tariff-row button{grid-column:4;grid-row:1;justify-self:end;margin-bottom:3px}
+.heat-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px;align-items:end;max-width:560px}
+.heat-row button{margin-bottom:3px}
+#sumView{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;flex-direction:column}
+#sumView[hidden]{display:none}
+.sum-bar{display:flex;align-items:center;gap:8px;padding:0 12px;min-height:44px;border-bottom:1px solid var(--line);background:var(--bar)}
+.sum-bar h2{font-size:13px;margin:0}.sum-bar .sp{flex:1}
+.sum-scroll{overflow:auto;flex:1;padding:16px}
+.sum-scroll .sum{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px 24px}
 .settings-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--gap);align-items:start}
 .section-title{display:flex;flex-direction:column;gap:2px}
 .section-title h2{font-size:13px}
@@ -298,7 +310,7 @@ body.fatal #boot .spinner{display:none}
 #bootErr{white-space:pre-wrap;overflow-wrap:anywhere}
 body.setup .tabs,body.setup #termsCard,body.setup .not-setup{display:none!important}
 body:not(.setup) #setupIntro{display:none}
-body.readonly #logCard,body.readonly #tgtCard,body.readonly .ro-hide{display:none!important}
+body.readonly #logCard,body.readonly #tgtCard,body.readonly #heatCard,body.readonly .ro-hide{display:none!important}
 .confirm-box{background:var(--panel2);border:1px solid var(--line2);border-radius:5px;padding:8px 10px;display:flex;flex-direction:column;gap:8px}
 .kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;font-size:12.5px}
 .kv dt{color:var(--muted)}.kv dd{margin:0;overflow-wrap:anywhere}
@@ -404,6 +416,20 @@ body.readonly #logCard,body.readonly #tgtCard,body.readonly .ro-hide{display:non
           <div class="card-head"><h2 id="tgtH">Daily targets</h2><span class="note">kWh per day</span></div>
           <div class="tbl-wrap" id="tgtDays"></div>
           <p class="note" id="tgtNote" style="margin-bottom:0"></p>
+        </section>
+
+        <section class="card" aria-labelledby="heatH" id="heatCard" hidden>
+          <div class="card-head"><h2 id="heatH">Heating plan</h2><span class="note" id="heatSub"></span></div>
+          <p class="heat-head" id="heatCold" hidden></p>
+          <p class="heat-head" id="heatHead"></p>
+          <div class="tbl-wrap" id="heatOpts"></div>
+          <p class="note" id="heatNote" style="margin-bottom:0"></p>
+        </section>
+
+        <section class="card" aria-labelledby="shareH" id="shareCard" hidden>
+          <div class="card-head"><h2 id="shareH">Sharing the bill</h2><a href="#" data-goto="settings">Change</a></div>
+          <p class="heat-head" id="shareHead"></p>
+          <div class="tbl-wrap" id="shareTbl"></div>
         </section>
 
         <section class="card" aria-labelledby="addH" id="logCard">
@@ -516,6 +542,26 @@ body.readonly #logCard,body.readonly #tgtCard,body.readonly .ro-hide{display:non
         </div>
         <div id="tariffRows" style="display:flex;flex-direction:column;gap:8px"></div>
       </section>
+      <section class="card">
+        <div class="card-head">
+          <div class="section-title"><h2>Your heating</h2><span class="note">Optional. Used to suggest a thermostat setting and heating times that keep you within the cap.</span></div>
+          <button type="button" class="btn ghost small" id="addHeatTime">Add heating time</button>
+        </div>
+        <div class="row">
+          <label>Thermostat set to<span class="unit"><input type="number" id="sSet" min="10" max="30" step="0.5" placeholder="e.g. 20"><span>°C</span></span></label>
+          <label>Your home cools down<select id="sCools"><option value="fast">Quickly (draughty, little insulation)</option><option value="avg">About average</option><option value="slow">Slowly (well insulated)</option></select></label>
+        </div>
+        <div id="heatRows" style="display:flex;flex-direction:column;gap:8px"></div>
+        <p class="note" style="margin-bottom:0">Heating times are when the timer has the heating on, as hh:mm (e.g. 06:30). Leave them out if it’s on all day and only the thermostat controls it. The suggestions assume these are the settings you’ve been using.</p>
+      </section>
+      <section class="card">
+        <div class="card-head">
+          <div class="section-title"><h2>Sharing the bill</h2><span class="note">Optional. Add everyone who shares the bill to see each person’s part of it, and of anything over the cap.</span></div>
+          <button type="button" class="btn ghost small" id="addPerson">Add person</button>
+        </div>
+        <div id="peopleRows" style="display:flex;flex-direction:column;gap:8px"></div>
+        <p class="note" style="margin-bottom:0">Shares are relative: 1 each splits it evenly; give someone 2 to pay twice as much (say, for a bigger room).</p>
+      </section>
       <div class="actions">
         <button class="btn" type="submit" id="saveSettings">Save settings</button>
         <span class="msg" id="settingsMsg" role="status"></span>
@@ -525,7 +571,7 @@ body.readonly #logCard,body.readonly #tgtCard,body.readonly .ro-hide{display:non
       <section class="card" id="termsCard" aria-labelledby="termsH">
         <div class="section-title"><h2 id="termsH">Terms</h2><span class="note">When a tenancy ends, start a new term. Past terms are kept and can be viewed at any time.</span></div>
         <div id="termsBox" class="tbl-wrap"></div>
-        <div class="actions"><button type="button" class="btn ghost small" id="newTermBtn">Start a new term</button></div>
+        <div class="actions"><button type="button" class="btn ghost small" id="sumBtn">Term summary</button><button type="button" class="btn ghost small" id="newTermBtn">Start a new term</button></div>
         <div class="confirm-box" id="newTermBox" hidden>
           <div class="row">
             <label>New term starts<input type="date" id="ntStart"></label>
@@ -544,16 +590,35 @@ body.readonly #logCard,body.readonly #tgtCard,body.readonly .ro-hide{display:non
         </div>
         <div class="actions">
           <label class="btn ghost small" style="flex-direction:row;color:var(--ink)">Import a backup or CSV…<input type="file" id="importFile" accept=".json,.csv,application/json,text/csv" hidden></label>
+          <label class="btn ghost small not-setup" style="flex-direction:row;color:var(--ink)">Import smart meter data from your supplier…<input type="file" id="supFile" accept=".csv,text/csv" hidden></label>
+        </div>
+        <div class="confirm-box" id="supBox" hidden>
+          <p style="margin:0">Check these match your supplier’s file:</p>
+          <div class="row">
+            <label>Date column<select id="supDate"></select></label>
+            <label>Usage column<select id="supUse"></select></label>
+          </div>
+          <div class="row">
+            <label>Meter<select id="supFuel"><option value="e">Electricity</option><option value="g">Gas</option></select></label>
+            <label id="supUnitL">Usage is in<select id="supUnit"><option value="kWh">kWh</option><option value="m3">Cubic metres (m³)</option><option value="ft3">Hundreds of cubic feet (ft³)</option></select></label>
+          </div>
+          <p class="note" id="supPrev" style="margin:0"></p>
+          <div class="actions"><button type="button" class="btn" id="supGo">Add</button><button type="button" class="btn ghost" id="supCancel">Cancel</button></div>
         </div>
         <div class="confirm-box" id="importBox" hidden>
           <p id="importQ" style="margin:0"></p>
           <div class="actions"><button type="button" class="btn danger" id="importGo">Replace my data</button><button type="button" class="btn ghost" id="importCancel">Cancel</button></div>
         </div>
         <p class="msg" id="dataMsg" role="status" style="margin-bottom:0"></p>
-        <p class="note" style="margin-bottom:0">A CSV import adds the rows to this term and skips any you already have. It needs the columns from, to, electricity_kwh and gas_kwh (dates as yyyy-mm-dd or dd/mm/yyyy), the same as an export.</p>
+        <p class="note" style="margin-bottom:0">A CSV import adds the rows to this term and skips any you already have. It needs the columns from, to, electricity_kwh and gas_kwh (dates as yyyy-mm-dd or dd/mm/yyyy), the same as an export. Your supplier’s smart meter data (daily or half-hourly, downloaded as a CSV from your online account) can be imported too: it adds a day entry for each full day and leaves days you’ve already logged alone.</p>
       </section>
     </div>
   </div>
+</div>
+
+<div id="sumView" hidden role="dialog" aria-modal="true" aria-labelledby="sumTtl">
+  <div class="sum-bar"><h2 id="sumTtl">Term summary</h2><span class="sp"></span><span class="msg" id="sumMsg" role="status"></span><button type="button" class="btn small" id="sumSave">Save as a file</button><button type="button" class="btn ghost small" id="sumClose">Close</button></div>
+  <div class="sum-scroll"><div class="sum" id="sumBody"></div></div>
 </div>
 
 <footer class="statusbar">
@@ -670,7 +735,7 @@ function model(S,E){
     d.ec=d.eu*T.eRate/100;d.gc=d.gu*T.gRate/100;d.sc=(T.eStand+T.gStand)/100;d.ex=d.ec+d.gc+d.sc;d.vat=d.ex*vr;d.cost=d.ex*bf;
     d.lo=((eLo*T.eRate+gLo*T.gRate)/100+d.sc)*bf;d.hi=((eHi*T.eRate+gHi*T.gRate)/100+d.sc)*bf;
     d.heat=((d.eCov?0:pe.h*T.eRate)+(d.gCov?0:pg.h*T.gRate))/100*bf;
-    d.Fx=d.sc*bf;d.Bx=(pe.b*T.eRate+pg.b*T.gRate)/100*bf;d.Hx=(pe.h*T.eRate+pg.h*T.gRate)/100*bf;/* expected fixed, baseline, heating */d.gB=pg.b;d.gH=pg.h;d.eB=pe.b;d.eH=pe.h;d.gRate=T.gRate;
+    d.Fx=d.sc*bf;d.Bx=(pe.b*T.eRate+pg.b*T.gRate)/100*bf;d.Hx=(pe.h*T.eRate+pg.h*T.gRate)/100*bf;/* expected fixed, baseline, heating */d.gB=pg.b;d.gH=pg.h;d.eB=pe.b;d.eH=pe.h;d.gRate=T.gRate;d.Hk=((fE?fE.b:0)*T.eRate+(fG?fG.b:0)*T.gRate)/100*bf;/* heating cost per degree day */
     d.logged=(d.eCov||!fE)&&(d.gCov||!fG)&&(d.eCov||d.gCov);
     // where the day's figure comes from: a single-day log, a period log split evenly, an estimate, or the forecast
     d.kind=d.logged?((d.ePer&&!d.eDay)||(d.gPer&&!d.gDay)?'period':'day'):d.past?'est':'fc';
@@ -736,12 +801,12 @@ function model(S,E){
 }
 
 function renderBanner(S,ro){const b=$('banner');b.dataset.kind='';b.hidden=false;
-  if(ro)b.innerHTML=`Viewing a past term, <strong class="num">${fmtDateY(S.termStart)} – ${fmtDateY(S.termEnd)}</strong>. Past terms can’t be changed.<button type="button" class="btn ghost small" data-act="back-term">Back to the current term</button>`;
-  else if(S.termEnd&&TODAY>S.termEnd){b.dataset.kind='warn';b.innerHTML=`<strong>This term ended on ${fmtDateY(S.termEnd)}.</strong> If you’ve renewed or moved, start a new term to keep tracking.<button type="button" class="btn ghost small" data-act="new-term">Start a new term</button>`}
+  if(ro)b.innerHTML=`Viewing a past term, <strong class="num">${fmtDateY(S.termStart)} – ${fmtDateY(S.termEnd)}</strong>. Past terms can’t be changed.<button type="button" class="btn ghost small" data-act="summary">Term summary</button><button type="button" class="btn ghost small" data-act="back-term">Back to the current term</button>`;
+  else if(S.termEnd&&TODAY>S.termEnd){b.dataset.kind='warn';b.innerHTML=`<strong>This term ended on ${fmtDateY(S.termEnd)}.</strong> If you’ve renewed or moved, start a new term to keep tracking.<button type="button" class="btn ghost small" data-act="summary">Term summary</button><button type="button" class="btn ghost small" data-act="new-term">Start a new term</button>`}
   else if(!placeOf(S)&&S.seasonal!==false){b.dataset.kind='warn';b.innerHTML='Add your town or city under <a href="#" data-goto="settings">Tariff &amp; cap</a> so the forecast can use real temperatures.'}
   else b.hidden=true}
 $('banner').addEventListener('click',e=>{const a=e.target.closest('[data-act]');if(!a)return;
-  if(a.dataset.act==='back-term')setView(-1);else if(a.dataset.act==='new-term'){showTab('settings');openNewTerm()}});
+  if(a.dataset.act==='summary')openSummary();else if(a.dataset.act==='back-term')setView(-1);else if(a.dataset.act==='new-term'){showTab('settings');openNewTerm()}});
 
 function render(){
   const {S,E,ro}=current();if(!S)return;
@@ -761,7 +826,7 @@ function render(){
     tiles.forEach(k=>$(k).textContent='—');tiles.forEach(k=>$(k==='monthVal'?'monthNote':k+'Note').textContent='');
     chartMonth=null;$('chartNav').hidden=true;$('monthSum').hidden=true;
     $('chart').innerHTML='<div class="empty">The forecast appears once you’ve logged at least one day or period.</div>';
-    $('fuelSplit').innerHTML='';$('monthsTbl').innerHTML='';$('chartNote').textContent='';return}
+    $('fuelSplit').innerHTML='';$('monthsTbl').innerHTML='';$('chartNote').textContent='';$('heatCard').hidden=true;$('shareCard').hidden=true;return}
   const X=M.extra,ratio=M.capTotal?M.tot.cost/M.capTotal:0;
   {const el=$('projTotal'),v=gbp(M.tot.cost);if(el.textContent!==v){el.textContent=v;}}
   const rng=`Likely <span class="num">${gbp0(M.tot.lo)}–${gbp0(M.tot.hi)}</span>`;
@@ -807,7 +872,7 @@ function render(){
   const ce=cmp(r.e,r.eExp),cg=cmp(r.g,r.gExp);
   $('recentNote').textContent=`kWh/day elec / gas, last ${r.n} logged day${r.n===1?'':'s'}`+(M.useW&&(ce||cg)?`. For the weather: elec ${ce||'—'}, gas ${cg||'—'}.`:'.');
   $('vatLegend').hidden=!M.inclVat;
-  renderTargets(M);renderChart(M);renderFuel(M,S);renderMonths(M);
+  renderTargets(M);renderHeat(S,M);renderShare(S,M);renderChart(M);renderFuel(M,S);renderMonths(M);
   const tw=weather&&weather.temps&&weather.temps[TODAY];const wm=$('wxMod');wm.dataset.bad='';wm.title='';
   if(weather&&weather.error){wm.hidden=false;wm.dataset.bad='1';wm.textContent='Weather unavailable';wm.title=`Couldn’t get temperatures for “${placeOf(S)}”: ${weather.error}. Using ${typicalLabel()}.`}
   else if(tw!=null){wm.hidden=false;wm.textContent=`${String(weather.place||'').split(',')[0]} ${tw.toFixed(1)} °C`}else wm.hidden=true;
@@ -844,7 +909,7 @@ function renderEntries(S,E,ro,M){
   let h='<div class="tbl-wrap"><table><thead><tr><th>Dates</th><th class="r">Elec kWh</th><th class="r">Gas kWh</th><th class="r">Units excl. VAT</th><th></th></tr></thead><tbody>';
   for(const en of sorted){const days=Math.round((toD(en.to)-toD(en.from))/DAY)+1;let cost=0;
     for(let t=toD(en.from);t<=toD(en.to);t+=DAY){const T=tariffFor(S,toS(t));cost+=((en.elec||0)/days)*T.eRate/100+((en.gas||0)/days)*T.gRate/100}
-    h+=`<tr><td>${en.from===en.to?fmtDate(en.from):fmtDate(en.from)+' – '+fmtDate(en.to)+` <span class="tag">${days} days</span>`}${en.reading?' <span class="tag" title="Worked out from two meter readings">From readings</span>':''}${en.gbp?` <span class="tag" title="Entered in pounds${en.gbp.vat?', incl. VAT':''}${en.gbp.stand?', incl. standing charge':''}">From £</span>`:''}</td>
+    h+=`<tr><td>${en.from===en.to?fmtDate(en.from):fmtDate(en.from)+' – '+fmtDate(en.to)+` <span class="tag">${days} days</span>`}${en.reading?' <span class="tag" title="Worked out from two meter readings">From readings</span>':''}${en.supplier?' <span class="tag" title="Imported from your supplier">From supplier</span>':''}${en.gbp?` <span class="tag" title="Entered in pounds${en.gbp.vat?', incl. VAT':''}${en.gbp.stand?', incl. standing charge':''}">From £</span>`:''}</td>
     <td class="r num">${en.elec!=null&&en.elec!==''?kwh(en.elec):'—'}</td><td class="r num">${en.gas!=null&&en.gas!==''?kwh(en.gas):'—'}</td><td class="r num">${gbp(cost)}</td>
     <td class="r">${ro||en.reading?'':`<span data-id="${esc(en.id)}"><button class="btn ghost small" data-act="edit">Edit</button> <button class="btn ghost small" data-act="del">Delete</button></span>`}</td></tr>`}
   h+='</tbody></table></div><p class="note" style="margin:0">Unit charges only, before VAT. Standing charges and VAT are added per day in the forecast.</p>';
@@ -888,6 +953,96 @@ function viewNote(M){const f=chartFuel==='e'?'electricity':chartFuel==='g'?'gas'
   return chartUnit==='kwh'?`Showing ${f} use in kWh. Switch to £ with both fuels to see the cap.`:`Showing ${f} unit costs${M.inclVat?' including VAT':''}, without standing charges. Switch to both fuels to see the cap.`} // index of the month open in the daily view, or null for all months
 const MONL=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const WKD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+// ---------- heating plan ----------
+// The fit above gives each home's heating use per degree day (kWh for each °C the day is below 15.5 °C). A house loses
+// heat in line with how much warmer it is inside than out, so what matters is the day's average indoor temperature.
+// With the heating on, the house is held at the thermostat setting; with it off, it cools towards the outside temperature
+// with a time constant of COOL_H hours (recovery is treated as instant). That makes the average lift over outside a fixed
+// share (phi) of the thermostat's lift, whatever the weather, so heating = k × (phi × (set − out) − g), and the current
+// settings calibrate k and g against the fit. A 1 °C lower thermostat then saves the fitted kWh per degree day on every
+// cold day, and fewer hours save less than pro rata because the house holds some of its heat.
+const COOL_H={fast:10,avg:20,slow:40};
+const SAFE_MIN=18; // UK health guidance: keep living rooms at 18 °C or more, so suggestions never go below it
+function parseHM(v){v=String(v||'').trim();if(!v)return NaN;const m=v.match(/^(\d{1,2})(?:[:.]?(\d{2}))?$/);if(!m)return NaN;
+  const h=+m[1],mi=+(m[2]||0);if(h>24||mi>59||(h===24&&mi))return NaN;return h*60+mi}
+const fmtHM=m=>{m=((m%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
+// heating times as sorted, merged [start,end) minute ranges within the day (overnight times are split at midnight)
+function mergeIv(iv){iv=iv.filter(v=>v[1]>v[0]).sort((x,y)=>x[0]-y[0]);const out=[];
+  for(const v of iv){const l=out[out.length-1];if(l&&v[0]<=l[1])l[1]=Math.max(l[1],v[1]);else out.push([v[0],Math.min(1440,v[1])])}return out}
+function heatIv(periods){const iv=[];for(const p of periods||[]){const a=parseHM(p.from),b=parseHM(p.to);if(!(a>=0)||!(b>=0)||a%1440===b%1440)continue;
+    if(b>a)iv.push([a,b]);else{iv.push([a,1440]);if(b>0)iv.push([0,b])}}
+  return mergeIv(iv)}
+const onMins=iv=>iv.reduce((a,v)=>a+v[1]-v[0],0);
+function phiOf(iv,tau){if(!iv.length||onMins(iv)>=1440)return 1;const t=tau*60;let x=onMins(iv);
+  iv.forEach((v,i)=>{const L=(i+1<iv.length?iv[i+1][0]:iv[0][0]+1440)-v[1];if(L>0)x+=t*(1-Math.exp(-L/t))});return x/1440}
+function fmtIv(iv){if(!iv.length)return 'All day';const v=iv.map(x=>[...x]);
+  if(v.length>1&&v[0][0]===0&&v[v.length-1][1]===1440){v[v.length-1][1]=v[0][1];v.shift()}
+  return v.map(x=>`${fmtHM(x[0])}–${fmtHM(x[1])}`).join(', ')}
+// take 30 minutes at a time off the longest heating time (or add it), alternately at its end and its start,
+// so a cut of two hours is an hour later on and an hour earlier off rather than the evening ending at teatime
+function adjIv(iv,mins){let v=iv.map(x=>[...x]);const step=mins<0?-30:30;
+  for(let k=0;k<Math.abs(mins)/30;k++){if(!v.length)return v;let j=0;v.forEach((x,i)=>{if(x[1]-x[0]>=v[j][1]-v[j][0])j=i});
+    if(k%2===0)v[j][1]=Math.min(1440,v[j][1]+step);else v[j][0]=Math.max(0,v[j][0]-step);v=mergeIv(v)}
+  return v}
+const fmtSet=s=>(Math.round(s*2)/2).toLocaleString('en-GB')+' °C';
+function heatPlan(S,M){const H=S&&S.heating;if(!H||!(+H.setpoint>0)||!M||!M.cm||!M.useW||!(M.fE||M.fG))return null;
+  const rest=M.cm.dd.filter(d=>!d.past);if(!rest.length)return null;
+  const tau=COOL_H[H.cools]||COOL_H.avg,T=weather&&weather.temps;
+  const mk=(set,iv)=>({set,iv,phi:phiOf(iv,tau)}),cur=mk(+H.setpoint,heatIv(H.periods));
+  const g=cur.phi*(cur.set-HDD_BASE);
+  const To=rest.map(d=>T&&T[d.s]!=null?T[d.s]:HDD_BASE-d.h);
+  const cost=p=>rest.reduce((a,d,i)=>a+d.Fx+d.Bx+d.Hk*Math.max(0,(p.phi*(p.set-To[i])-g)/cur.phi),0);
+  const P={cur,rest,base:cost(cur),cost};
+  P.perDeg=P.base-cost(mk(cur.set-1,cur.iv));
+  P.perHour=cur.iv.length&&onMins(cur.iv)>60?P.base-cost(mk(cur.set,adjIv(cur.iv,-60))):null;
+  P.budget=M.capTotal?M.cm.allow-M.cm.spent:null;P.opts=[];
+  if(P.budget==null||P.perDeg<0.01)return P;
+  const fits=p=>cost(p)<=P.budget+0.005;
+  const add=(kind,p)=>{p.kind=kind;p.fits=fits(p);P.opts.push(p)};
+  if(P.base>P.budget){
+    // over: the smallest cut in degrees, or in hours, that fits; if neither does on its own, both together
+    let low=null;for(let s=cur.set-0.5;s>=SAFE_MIN-1e-9;s-=0.5){low=mk(s,cur.iv);if(fits(low))break}
+    if(low)add('Cooler',low);
+    let short=null;if(cur.iv.length)for(let m=30;m<=180;m+=30){const iv=adjIv(cur.iv,-m);if(onMins(iv)<120)break;short=mk(cur.set,iv);if(fits(short))break}
+    if(short)add('Shorter',short);
+    if(low&&short&&!low.fits&&!short.fits)add('Both',mk(low.set,short.iv))}
+  else{
+    // under: the warmest setting, or the longest heating, the allowance still covers (up to 2 °C or 2 hours more)
+    let up=null;for(let s=cur.set+0.5;s<=Math.min(cur.set+2,24)+1e-9;s+=0.5){const p=mk(s,cur.iv);if(!fits(p))break;up=p}
+    if(up)add('Warmer',up);
+    let long=null;if(cur.iv.length)for(let m=30;m<=120;m+=30){const iv=adjIv(cur.iv,m);if(onMins(iv)>=1440)break;const p=mk(cur.set,iv);if(!fits(p))break;long=p}
+    if(long)add('Longer',long)}
+  return P}
+function renderHeat(S,M){const card=$('heatCard'),cm=M.cm;
+  if(!cm||!M.useW||!(M.fE||M.fG)||current().ro){card.hidden=true;return}
+  card.hidden=false;const mon=MONL[new Date(toD(cm.start)).getUTCMonth()];
+  const P=heatPlan(S,M);
+  {const k=coldSpell(M),el=$('heatCold');el.hidden=!k;
+    if(k)el.innerHTML=`<b>Cold spell ahead:</b> ${dayName(k.from)} – ${dayName(k.to)} looks about <span class="num">${Math.round(k.by)} °C</span> colder than usual${weather&&weather.place?' for '+esc(String(weather.place).split(',')[0]):''}`+
+      (k.cost>=0.5?`, adding about <span class="num">£${Math.round(k.cost)}</span> to the heating`:'')+'. The targets already allow for it, so easing off a little now leaves room.'}
+  if(!P){$('heatSub').textContent='';$('heatOpts').innerHTML='';$('heatNote').textContent='';
+    $('heatHead').innerHTML=`Add your thermostat setting and heating times under <a href="#" data-goto="settings">Tariff &amp; cap</a> to get a setting that keeps ${mon} on track.`;return}
+  $('heatSub').textContent=`Rest of ${mon}, ${P.rest.length} day${P.rest.length===1?'':'s'}`;
+  const c=P.cur,left=P.budget==null?null:P.budget-P.base,opts=P.opts;
+  const lv=v=>`<span class="num" style="color:${v<-0.5?'var(--bad)':'var(--good)'}">${v<-0.5?'£'+Math.round(-v)+' over':'£'+Math.round(Math.max(0,v))+' left'}</span>`;
+  let head;
+  if(left==null)head=`At your current settings the rest of ${mon} comes to about <b class="num">${gbp0(P.base)}</b>. Set a cap to get suggestions.`;
+  else if(P.perDeg<0.01)head=`Your logged use hasn’t followed the weather yet, so there’s nothing to suggest. Log a few colder days.`;
+  else if(left>=-0.5)head=`<b style="color:var(--good)">On track.</b> At your current settings you’d have about <b class="num">£${Math.round(left)}</b> of ${mon}’s allowance left`+(opts.length?', with room for a little more:':'.');
+  else{const ok=opts.filter(o=>o.fits);
+    head=`At your current settings you’d go about <b class="num" style="color:var(--bad)">£${Math.round(-left)} over</b> ${mon}’s allowance. `+
+      (ok.length>1?'Either change below keeps you within it:':ok.length?'This change keeps you within it:':opts.length?`Nothing above ${fmtSet(SAFE_MIN)} quite gets you there; these get you closest:`:`You’re already at ${fmtSet(SAFE_MIN)}, the lowest this suggests.`)}
+  $('heatHead').innerHTML=head;
+  const b=(v,ch)=>ch?`<b>${v}</b>`:v;
+  const row=(lbl,p,now)=>`<tr class="${now?'now':''}"><td>${lbl}</td><td class="r">${b(fmtSet(p.set),!now&&p.set!==c.set)}</td><td>${b(fmtIv(p.iv),!now&&fmtIv(p.iv)!==fmtIv(c.iv))}</td><td class="r">${left==null?gbp0(P.cost(p)):lv(P.budget-P.cost(p))}</td></tr>`;
+  $('heatOpts').innerHTML=`<table class="tgt heat"><thead><tr><th></th><th class="r">Thermostat</th><th>Heating on</th><th class="r">${left==null?'Cost':'Allowance'}</th></tr></thead><tbody>`+
+    row('Now',c,true)+opts.map(o=>row(o.kind,o)).join('')+'</tbody></table>';
+  const bits=[];if(P.perDeg>=0.5)bits.push(`each 1 °C lower saves about <span class="num">£${Math.round(P.perDeg)}</span>`);
+  if(P.perHour!=null&&P.perHour>=0.5)bits.push(`an hour less heating a day about <span class="num">£${Math.round(P.perHour)}</span>`);
+  $('heatNote').innerHTML=(bits.length?`Over the rest of ${mon}, ${bits.join(', and ')}. `:'')+
+    `Worked out from how your use has followed the weather. Suggestions don’t go below ${fmtSet(SAFE_MIN)}, the UK health guidance for living rooms.`+
+    (M.conf==='low'?' Rough for now: it gets better once you’ve logged some cold weather.':'')}
+
 // use per day that keeps this month within its allowance: each fuel's baseline plus its forecast heating use scaled by the
 // headroom multiplier, so colder days get a bigger target. Baseline use is assumed to carry on, so most of any cut falls on gas.
 // Shows today and the next six days of this billing month.
@@ -1096,8 +1251,8 @@ async function post(url,body){const r=await fetch(url,{method:'POST',headers:{'C
 // ---------- your data: export, import, show the file ----------
 function dataMsg(kind,html){const m=$('dataMsg');m.dataset.kind=kind;m.innerHTML=html}
 let lastExport=null,pendingImport=null;
-async function exportFile(name,content){try{const o=await post('/api/export',{name,content});lastExport=o.path;dataMsg('ok',`Saved to ${esc(o.path)}. <a href="#" data-act="reveal-export">Show in folder</a>`)}
-  catch(e){dataMsg('err','Couldn’t export: '+esc(netWhy(e)))}}
+async function exportFile(name,content,box){const say=box?(k,h)=>{const m=$(box);m.dataset.kind=k;m.innerHTML=h}:dataMsg;try{const o=await post('/api/export',{name,content});lastExport=o.path;say('ok',`Saved to ${esc(o.path)}. <a href="#" data-act="reveal-export">Show in folder</a>`)}
+  catch(e){say('err','Couldn’t export: '+esc(netWhy(e)))}}
 const csvCell=v=>v==null?'':/[",\r\n]/.test(String(v))?'"'+String(v).replace(/"/g,'""')+'"':String(v);
 function toCsv(E){const rows=[['from','to','electricity_kwh','gas_kwh','source']];
   for(const en of [...E].sort((a,b)=>a.from<b.from?-1:a.from>b.from?1:0))rows.push([en.from,en.to,en.elec,en.gas,en.reading?'meter reading':en.gbp?'entered in £':en.from===en.to?'day':'period']);
@@ -1145,6 +1300,179 @@ $('exportJson').onclick=()=>exportFile(`energy-backup-${TODAY}.json`,payload());
 $('revealData').onclick=e=>{e.preventDefault();post('/api/reveal',{}).catch(err=>dataMsg('err','Couldn’t open the folder: '+esc(netWhy(err))))};
 $('dataMsg').addEventListener('click',e=>{if(e.target.closest('[data-act="reveal-export"]')){e.preventDefault();post('/api/reveal',{path:lastExport}).catch(()=>{})}});
 
+// ---------- cold spell ahead ----------
+// The first run of 3 or more days in the 16-day forecast at least 3 °C colder than usual for the time of year.
+// The targets already allow for it; the note is so people can ease off before it arrives.
+function coldSpell(M){const T=weather&&weather.temps;if(!T||!M.useW)return null;
+  const typ=s=>{const d=new Date(toD(s));return typicalHdd()[d.getUTCMonth()]/dim(d.getUTCFullYear(),d.getUTCMonth())};
+  let run=[];
+  const done=()=>run.length>=3?{from:run[0].d.s,to:run[run.length-1].d.s,by:run.reduce((a,x)=>a+x.x,0)/run.length,cost:run.reduce((a,x)=>a+x.d.Hk*x.x,0)}:null;
+  for(const d of M.days){if(d.s<=TODAY||d.src!=='forecast')continue;const x=d.h-typ(d.s);
+    if(x>=3)run.push({d,x});else{const r=done();if(r)return r;run=[]}}
+  return done()}
+const dayName=s=>{const d=new Date(toD(s));return `${WKD[d.getUTCDay()]} ${d.getUTCDate()} ${MON[d.getUTCMonth()]}`};
+
+// ---------- sharing the bill ----------
+function peopleOf(S){return (S&&Array.isArray(S.people)?S.people:[]).filter(p=>p&&String(p.name||'').trim()&&+p.share>=0)}
+function splitRows(S,amounts){const P=peopleOf(S),W=P.reduce((a,p)=>a+(+p.share),0);if(P.length<2||!(W>0))return null;
+  return P.map(p=>({name:String(p.name).trim(),pct:(+p.share)/W,v:amounts.map(a=>a*(+p.share)/W)}))}
+function renderShare(S,M){const card=$('shareCard');const X=M.extra,over=X?X.c:0,cm=M.cm;
+  const rows=splitRows(S,[cm?cm.cost:0,M.tot.cost,over]);if(!rows){card.hidden=true;return}card.hidden=false;
+  const mon=cm?MONL[new Date(toD(cm.start)).getUTCMonth()]:null;
+  $('shareHead').innerHTML=`Projected term bill <b class="num">${gbp0(M.tot.cost)}</b>`+(M.capTotal?(over>=0.5?`, about <b class="num" style="color:var(--bad)">${gbp0(over)}</b> over the cap.`:', nothing over the cap.'):'.');
+  $('shareTbl').innerHTML=`<table class="tgt"><thead><tr><th>Name</th><th class="r">Share</th>${mon?`<th class="r">${MON[new Date(toD(cm.start)).getUTCMonth()]}</th>`:''}<th class="r">Term</th>${M.capTotal?'<th class="r">Over cap</th>':''}</tr></thead><tbody>`+
+    rows.map(r=>`<tr><td>${esc(r.name)}</td><td class="r num">${Math.round(r.pct*100)}%</td>${mon?`<td class="r num">${gbp0(r.v[0])}</td>`:''}<td class="r num">${gbp0(r.v[1])}</td>${M.capTotal?`<td class="r num"${r.v[2]>=0.5?' style="color:var(--bad)"':''}>${gbp0(r.v[2])}</td>`:''}</tr>`).join('')+'</tbody></table>'}
+
+// ---------- end-of-term summary ----------
+// One page for the term on show: the bill against the cap, month by month, the meter readings, the tariffs and how
+// the figures were made. Shown in the app and saved as a self-contained HTML file (open it in a browser to print).
+const SUM_CSS=`.sum{max-width:900px;margin:0 auto;color:var(--ink);font:13px/1.45 var(--f-body)}
+.sum h1{font-size:20px;font-weight:600;margin:0 0 2px}
+.sum .sub{color:var(--muted);margin:0 0 14px}
+.sum h3{font-size:13px;font-weight:600;margin:20px 0 6px}
+.sum .figs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:6px}
+.sum .fig{padding:10px 12px;min-width:0}.sum .fig+.fig{border-left:1px solid var(--line)}
+.sum .fig b{display:block;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.sum .fig span{color:var(--muted);font-size:12px}
+.sum .lbl{color:var(--muted);font-size:12px;display:block}
+.sum table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.sum th,.sum td{padding:5px 6px;border-bottom:1px solid var(--line2);text-align:left;white-space:nowrap}
+.sum th{color:var(--muted);font-weight:500;font-size:12px}
+.sum .r{text-align:right}
+.sum tfoot td{font-weight:600;border-bottom:0;border-top:1px solid var(--line)}
+.sum .tw{overflow-x:auto}
+.sum .note{color:var(--muted);font-size:12px;margin:6px 0 0}
+.sum ul{margin:0;padding-left:18px}.sum li{margin:2px 0}
+.sum .over{color:var(--bad)}.sum .under{color:var(--good)}
+.sum .cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 24px}
+@media (max-width:700px){.sum .figs{grid-template-columns:1fr 1fr}.sum .fig:nth-child(3){border-left:0}.sum .fig:nth-child(n+3){border-top:1px solid var(--line)}.sum .cols{grid-template-columns:1fr}}
+@media print{.sum{max-width:none;font-size:11px}.sum th,.sum td{padding:3px 4px}}`;
+document.head.insertAdjacentHTML('beforeend','<style>'+SUM_CSS+'</style>');
+const unitLbl=u=>u==='m3'?'m³':u==='ft3'?'ft³ (hundreds)':'kWh';
+function summaryHtml(){const {S,E,R}=current();if(!S)return '';const M=model(S,E);
+  const ended=TODAY>S.termEnd,place=weather&&weather.place?String(weather.place):placeOf(S);
+  const capWord=S.capPeriod==='term'?'for the whole term':S.capPeriod==='monthEach'?'a month, each month separate':'a month, unused allowance carries over';
+  let h=`<h1>Energy summary</h1><p class="sub">Term <b>${fmtDateY(S.termStart)} – ${fmtDateY(S.termEnd)}</b>${place?` · ${esc(place)}`:''} · prepared ${fmtDateY(TODAY)} with House Energy Tracker</p>`;
+  if(!M||M.empty)return h+'<p>Nothing has been logged in this term yet.</p>';
+  if(!ended)h+=`<p class="note" style="margin:0 0 10px">This term runs until ${fmtDateY(S.termEnd)}, so everything after ${fmtDateY(TODAY)} is a forecast.</p>`;
+  const X=M.extra,over=X?X.c:0,vatTxt=M.inclVat?`incl. ${gbp(M.tot.vat)} VAT`:'before VAT';
+  const under=M.capTotal&&!M.each?Math.max(0,M.capTotal-M.tot.cost):0;
+  const fig=(lbl,v,sub,cls)=>`<div class="fig"><span class="lbl">${lbl}</span><b class="${cls||''}">${v}</b><span>${sub}</span></div>`;
+  h+='<div class="figs">'+fig(ended?'Total bill':'Projected bill',gbp(M.tot.cost),vatTxt)+
+    fig('Cap',M.capTotal?gbp(M.capTotal):'None',M.capTotal?(S.capPeriod==='term'?'for the term':`${gbp(+S.capAmount||0)} ${capWord}`):'')+
+    (M.capTotal?fig(over>=0.005?(ended?'Over the cap':'Projected over the cap'):'Over the cap',gbp(over),over>=0.005?(M.each?'months over their cap, added up':'to pay on top of the cap'):(under?`${gbp(under)} under`:'within the cap'),over>=0.005?'over':'under'):fig('Over the cap','—',''))+
+    fig('Days logged',`${M.loggedDays} of ${M.n}`,M.unlogged?`${M.unlogged} past day${M.unlogged>1?'s':''} estimated`:ended?'every day logged':'every day so far logged')+'</div>';
+  // month by month
+  const ms=M.months,sum=k=>ms.reduce((a,m)=>a+m[k],0),cell=v=>`<td class="r">${gbp(v)}</td>`;
+  const basis={logged:'Logged',partial:'Part estimated',forecast:'Forecast'};
+  h+=`<h3>Month by month</h3><div class="tw"><table><thead><tr><th>Month</th><th>Basis</th><th class="r">Elec kWh</th><th class="r">Gas kWh</th><th class="r">Elec</th><th class="r">Gas</th><th class="r">Standing</th><th class="r">VAT</th><th class="r">Total</th>${M.capTotal?'<th class="r">Allowance</th><th class="r">Difference</th>':''}</tr></thead><tbody>`;
+  for(const m of ms){const d=new Date(toD(m.start)),part=m.frac<0.999?` <span class="note">(${fmtDate(m.start)}–${fmtDate(m.end)})</span>`:'';const df=m.cost-m.allow;
+    h+=`<tr><td>${MON[d.getUTCMonth()]} ${d.getUTCFullYear()}${part}</td><td>${m.state==='partial'?(m.pastDays<m.days?'Part forecast':m.dd.some(d=>d.eCov||d.gCov)?'Part estimated':'Estimated'):basis[m.state]}</td><td class="r">${kwh(m.eu)}</td><td class="r">${kwh(m.gu)}</td>${cell(m.e)}${cell(m.g)}${cell(m.st)}${cell(m.vat)}<td class="r"><b>${gbp(m.cost)}</b></td>`+
+      (M.capTotal?`${cell(m.allow)}<td class="r ${df>0.005?'over':'under'}">${df>0.005?'+':''}${gbp(df)}</td>`:'')+'</tr>'}
+  h+=`</tbody><tfoot><tr><td>Term</td><td></td><td class="r">${kwh(sum('eu'))}</td><td class="r">${kwh(sum('gu'))}</td>${cell(sum('e'))}${cell(sum('g'))}${cell(sum('st'))}${cell(sum('vat'))}<td class="r">${gbp(M.tot.cost)}</td>`+
+    (M.capTotal?`${cell(M.capTotal)}<td class="r ${M.tot.cost-M.capTotal>0.005?'over':'under'}">${M.tot.cost-M.capTotal>0.005?'+':''}${gbp(M.tot.cost-M.capTotal)}</td>`:'')+'</tr></tfoot></table></div>';
+  if(!M.inclVat)h+='<p class="note">Costs are before VAT, as the cap is.</p>';
+  // sharing
+  const rows=splitRows(S,[M.tot.cost,over]);
+  if(rows)h+=`<h3>Split between the household</h3><div class="tw"><table><thead><tr><th>Name</th><th class="r">Share</th><th class="r">Of the bill</th>${M.capTotal?'<th class="r">Of the amount over the cap</th>':''}</tr></thead><tbody>`+
+    rows.map(r=>`<tr><td>${esc(r.name)}</td><td class="r">${Math.round(r.pct*1000)/10}%</td><td class="r">${gbp(r.v[0])}</td>${M.capTotal?`<td class="r">${gbp(r.v[1])}</td>`:''}</tr>`).join('')+'</tbody></table></div>';
+  h+='<div class="cols"><div>';
+  // tariffs
+  const ts=[...(S.tariffs||[])].filter(t=>t.from).sort((a,b)=>a.from<b.from?-1:1);
+  h+=`<h3>Tariff</h3><div class="tw"><table><thead><tr><th>From</th><th class="r">Elec p/kWh</th><th class="r">Elec p/day</th><th class="r">Gas p/kWh</th><th class="r">Gas p/day</th></tr></thead><tbody>`+
+    ts.map(t=>`<tr><td>${fmtDateY(t.from)}</td><td class="r">${t.eRate||0}</td><td class="r">${t.eStand||0}</td><td class="r">${t.gRate||0}</td><td class="r">${t.gStand||0}</td></tr>`).join('')+
+    `</tbody></table></div><p class="note">Rates before VAT. VAT ${vatOf(S)}%. Cap ${M.capTotal?`${gbp(+S.capAmount||0)} ${capWord}, ${S.capInclVat!==false?'including':'excluding'} VAT`:'not set'}.</p>`;
+  h+='</div><div>';
+  // meter readings
+  const rs=[...(R||[])].sort((a,b)=>a.fuel===b.fuel?(a.date<b.date?-1:1):a.fuel==='e'?-1:1);
+  h+='<h3>Meter readings</h3>'+(rs.length?`<div class="tw"><table><thead><tr><th>Meter</th><th>Date</th><th class="r">Reading</th></tr></thead><tbody>`+
+    rs.map(r=>`<tr><td>${r.fuel==='e'?'Electricity':'Gas'}</td><td>${fmtDateY(r.date)}</td><td class="r">${(+r.value).toLocaleString('en-GB')} ${unitLbl(r.unit)}</td></tr>`).join('')+'</tbody></table></div>':'<p class="note">No meter readings were entered for this term.</p>');
+  h+='</div></div>';
+  // how
+  const nRead=E.filter(e=>e.reading).length,nSup=E.filter(e=>e.supplier).length,nPer=E.filter(e=>!e.reading&&e.from!==e.to).length;
+  h+=`<h3>How these figures were worked out</h3><ul>
+    <li>Usage comes from ${E.length} entr${E.length===1?'y':'ies'}${nRead?`, ${nRead} worked out from meter readings`:''}${nSup?`, ${nSup} imported from the supplier’s smart meter data`:''}${nPer?`; entries covering several days are split evenly over them`:''}.</li>
+    <li>Each day is costed at the tariff in force that day, with its standing charges${M.inclVat?' and VAT':''}.</li>
+    ${M.unlogged||!ended?`<li>Days not logged${!ended?' and days still to come':''} are estimated from this home’s own pattern of use${M.useW?` against the temperature${place?` in ${esc(place.split(',')[0])}`:''} (actual weather where known, otherwise the typical weather for the time of year)`:''}.</li>`:''}
+    <li>${M.capTotal?(M.each?'Each month is compared with its own cap; part months get a share by days.':'The cap is pooled: unused allowance carries over to later months.'):'No cap was set.'}</li></ul>`;
+  return h}
+let sumOpen=false;
+function openSummary(){$('sumBody').innerHTML=summaryHtml();$('sumMsg').textContent='';$('sumView').hidden=false;sumOpen=true;$('sumClose').focus()}
+function closeSummary(){$('sumView').hidden=true;sumOpen=false}
+$('sumClose').onclick=closeSummary;
+document.addEventListener('keydown',e=>{if(sumOpen&&e.key==='Escape')closeSummary()});
+$('sumSave').onclick=()=>{const {S}=current();
+  const doc=`<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Energy summary ${S.termStart} to ${S.termEnd}</title><style>
+:root{--ink:#1b1b19;--muted:#686863;--line:#dcdcd8;--line2:#ebebe8;--good:#2b8a3e;--bad:#d0312d;--f-body:system-ui,-apple-system,"Segoe UI","Noto Sans",Roboto,sans-serif}
+body{margin:0;padding:24px 16px;background:#fff}${SUM_CSS}</style></head><body><div class="sum">${$('sumBody').innerHTML}</div></body></html>`;
+  exportFile(`energy-summary-${S.termStart}-to-${S.termEnd}.html`,doc,'sumMsg')};
+$('sumMsg').addEventListener('click',e=>{if(e.target.closest('[data-act="reveal-export"]')){e.preventDefault();post('/api/reveal',{path:lastExport}).catch(()=>{})}});
+$('sumBtn').onclick=openSummary;
+
+// ---------- import from a supplier's smart meter CSV ----------
+// Suppliers' downloads differ, so the app finds a date column and a usage column, lets the user check them, and adds
+// one day entry per full day. Half-hourly or hourly rows are added up; days the file only partly covers are left out.
+let supState=null;
+const MONS=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+const okIso=(y,m,d)=>{if(!(y>=2000&&y<2100))return null;const s=isoOf(y,m,d);return toS(toD(s))===s?s:null};
+function supDay(s){s=String(s||'').trim();let m;
+  if((m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)))return okIso(+m[1],+m[2]-1,+m[3]);
+  if((m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4}|\d{2})(?!\d)/)))return okIso(+m[3]<100?2000+ +m[3]:+m[3],+m[2]-1,+m[1]);
+  if((m=s.match(/^(?:[a-z]{3,9},?\s+)?(\d{1,2})(?:st|nd|rd|th)?[\s-]+([a-z]{3})[a-z]*,?[\s-]+(\d{4})/i))){const mi=MONS.indexOf(m[2].toLowerCase());return mi<0?null:okIso(+m[3],mi,+m[1])}
+  return null}
+function supNum(v){v=String(v??'').trim().replace(/[,\s]/g,'');if(v===''||v==='-')return null;const n=+v;return isFinite(n)&&n>=0?n:NaN}
+function supLoad(text,name){if(!settingsDoc)throw new Error('Finish setting up first, then import your supplier’s data.');
+  const rows=parseCsv(text.replace(/^﻿/,''));
+  let h=-1;for(let i=0;i<Math.min(rows.length-1,25);i++){if(rows[i].length>=2&&!rows[i].some(c=>supDay(c))&&rows[i+1].some(c=>supDay(c))){h=i;break}}
+  const data=rows.slice(h+1).filter(r=>r.some(c=>supDay(c)));
+  if(!data.length)throw new Error('Couldn’t find any dates in that file. It needs a column of dates and a column of usage.');
+  const width=Math.max(...data.slice(0,50).map(r=>r.length));
+  const heads=Array.from({length:width},(_,i)=>h>=0&&rows[h][i]&&rows[h][i].trim()?rows[h][i].trim():`Column ${i+1}`);
+  const sample=data.slice(0,300),share=(i,f)=>sample.filter(r=>f(r[i])).length/sample.length;
+  const idx=heads.map((_,i)=>i),dateCols=idx.filter(i=>share(i,supDay)>0.8);
+  const numCols=idx.filter(i=>!dateCols.includes(i)&&share(i,v=>{const n=supNum(v);return n!=null&&!Number.isNaN(n)})>0.8);
+  if(!dateCols.length||!numCols.length)throw new Error('Couldn’t find a column of dates and a column of usage in that file.');
+  const score=(s,pairs)=>pairs.reduce((a,[re,w])=>a+(re.test(s)?w:0),0);
+  const best=(cols,pairs)=>cols.reduce((b,i)=>score(heads[i],pairs)>score(heads[b],pairs)?i:b,cols[0]);
+  const di=best(dateCols,[[/start|from|begin/i,3],[/date|day/i,2],[/end|\bto\b/i,-3]]);
+  const ui=best(numCols,[[/consum|usage|used|kwh|units|import|volume/i,3],[/read|total|cumul|cost|£|price|pence|standing|export|carbon|co2|mpan|mprn|serial/i,-5]]);
+  const opts=cols=>cols.map(i=>`<option value="${i}">${esc(heads[i])}</option>`).join('');
+  $('supDate').innerHTML=opts(dateCols);$('supDate').value=String(di);$('supUse').innerHTML=opts(numCols);$('supUse').value=String(ui);
+  const all=(name+' '+heads.join(' ')).toLowerCase();
+  $('supFuel').value=/gas|mprn/.test(all)&&!/elec|mpan/.test(all)?'g':'e';
+  $('supUnit').value=/m3|m³|cubic/.test(heads[ui].toLowerCase()+' '+name.toLowerCase())?'m3':'kWh';
+  supState={data,name};$('supBox').hidden=false;supPreview()}
+function supPlan(){const {data}=supState,di=+$('supDate').value,ui=+$('supUse').value,f=$('supFuel').value,unit=f==='g'?$('supUnit').value:'kWh',S=settingsDoc;
+  const by=new Map();for(const r of data){const d=supDay(r[di]),v=supNum(r[ui]);if(!d||v==null||Number.isNaN(v))continue;const o=by.get(d)||{n:0,v:0};o.n++;o.v+=v;by.set(d,o)}
+  const freq=new Map();for(const o of by.values())freq.set(o.n,(freq.get(o.n)||0)+1);
+  let mode=1,mc=0;for(const [n,c] of freq)if(c>mc||(c===mc&&n>mode)){mode=n;mc=c}
+  const has=en=>f==='e'?en.elec!=null&&en.elec!=='':en.gas!=null&&en.gas!=='';
+  const covered=new Set();for(const en of entries)if(has(en))for(let t=toD(en.from);t<=toD(en.to);t+=DAY)covered.add(toS(t));
+  const days=[...by.keys()].sort(),add=[];let part=0,have=0,outside=0;
+  for(const d of days){const o=by.get(d);if(d>=TODAY||o.n<mode*0.9){part++;continue}if(d<S.termStart||d>S.termEnd){outside++;continue}if(covered.has(d)){have++;continue}
+    add.push({d,raw:o.v,k:f==='g'?gasToKwh(o.v,unit,S.gasCV||39.5):o.v})}
+  return {add,part,have,outside,f,unit,days,first:days[0],last:days[days.length-1]}}
+function supPreview(){if(!supState)return;$('supUnitL').hidden=$('supFuel').value!=='g';const P=supPlan(),n=P.add.length,fuel=P.f==='e'?'electricity':'gas';
+  const skip=[P.have?`${P.have} already logged`:'',P.part?`${P.part} only partly covered`:'',P.outside?`${P.outside} outside this term`:''].filter(Boolean);
+  const avg=n?P.add.reduce((a,x)=>a+x.k,0)/n:0;
+  $('supPrev').innerHTML=P.days.length?`${P.days.length} day${P.days.length>1?'s':''} in the file, ${fmtDateY(P.first)} – ${fmtDateY(P.last)}. `+
+    (n?`<b>${n}</b> to add as ${fuel}, averaging <span class="num">${kwh(avg)}</span> kWh a day`:`Nothing new to add`)+(skip.length?` (skipping ${skip.join(', ')})`:'')+'.'+
+    (n&&avg>(P.f==='e'?60:250)?' <span style="color:var(--warn)">That looks high for a home: check the usage column and unit.</span>':''):'None of the rows has both a date and a usage figure in those columns.';
+  $('supGo').disabled=!n;$('supGo').textContent=n?`Add ${n} day${n>1?'s':''}`:'Add'}
+['supDate','supUse','supFuel','supUnit'].forEach(id=>$(id).addEventListener('change',supPreview));
+$('supCancel').onclick=()=>{supState=null;$('supBox').hidden=true};
+$('supGo').onclick=()=>{if(!supState)return;const P=supPlan(),stamp=Date.now(),now=new Date().toISOString(),key=P.f==='e'?'elec':'gas';let merged=0;
+  P.add.forEach((a,i)=>{const k=+a.k.toFixed(3);
+    // a day already logged for the other fuel only gets this fuel added to it, rather than a second entry
+    const same=entries.find(en=>en.from===a.d&&en.to===a.d&&!en.reading&&!en.gbp&&(en[key]==null||en[key]===''));
+    if(same){same[key]=k;if(key==='gas'){same.gasRaw=+a.raw.toFixed(3);same.gasUnit=P.unit}same.supplier=true;same.updated=now;merged++;return}
+    entries.push({id:'s'+stamp+'-'+i,from:a.d,to:a.d,elec:key==='elec'?k:null,gas:key==='gas'?k:null,gasRaw:key==='gas'?+a.raw.toFixed(3):null,gasUnit:key==='gas'?P.unit:'kWh',gbp:null,supplier:true,updated:now})});
+  const n=P.add.length;supState=null;$('supBox').hidden=true;queueSave();render();
+  dataMsg('ok',`Added ${n} day${n>1?'s':''} of ${P.f==='e'?'electricity':'gas'} use from your supplier’s file.`)};
+$('supFile').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const rd=new FileReader();
+  rd.onload=()=>{try{supLoad(String(rd.result),f.name)}catch(err){$('supBox').hidden=true;dataMsg('err',esc(err.message))}};
+  rd.onerror=()=>dataMsg('err','Couldn’t read that file.');rd.readAsText(f)});
+
 // ---------- terms: start a new one, look back at past ones ----------
 function renderTerms(){const box=$('termsBox');if(!settingsDoc){box.innerHTML='';return}
   const row=(S,i,n,cur)=>`<tr${viewTerm===i?' class="now"':''}><td class="num">${fmtDateY(S.termStart)} – ${fmtDateY(S.termEnd)}${cur?' <span class="tag">Current</span>':''}</td><td class="r num">${n} entr${n===1?'y':'ies'}</td>
@@ -1174,6 +1502,8 @@ function fillSettings(){const S=settingsDoc||setupDefaults();$('sStart').value=S
   $('sGasUnit').value=S.gasUnit||'kWh';$('sCV').value=S.gasCV??39.5;$('sSeasonal').checked=S.seasonal!==false;
   if(settingsDoc&&settingsDoc.palette)applyPalette(settingsDoc.palette);$('sVat').value=vatOf(S);$('sPlace').value=placeOf(S);$('sCapVat').checked=S.capInclVat!==false;
   const rows=$('tariffRows');rows.innerHTML='';(S.tariffs&&S.tariffs.length?S.tariffs:[{from:S.termStart}]).forEach(addTariffRow);
+  const Hs=S.heating||{};$('sSet').value=Hs.setpoint??'';$('sCools').value=COOL_H[Hs.cools]?Hs.cools:'avg';$('heatRows').innerHTML='';(Hs.periods||[]).forEach(addHeatRow);$('peopleRows').innerHTML='';(S.people||[]).forEach(addPersonRow);
+
   $('settingsMsg').textContent='';$('settingsMsg').dataset.kind=''}
 let tRowN=0;
 function addTariffRow(t){t=t||{};const n=tRowN++;const div=document.createElement('div');div.className='tariff-row';
@@ -1185,12 +1515,37 @@ function addTariffRow(t){t=t||{};const n=tRowN++;const div=document.createElemen
   <button type="button" class="btn ghost small" aria-label="Remove this rate">Remove</button>`;
   div.querySelector('button').onclick=()=>{if($('tariffRows').children.length>1)div.remove()};$('tariffRows').appendChild(div);enhanceInputs(div)}
 $('addTariff').onclick=()=>addTariffRow({from:TODAY});
+function addHeatRow(p){p=p||{};const div=document.createElement('div');div.className='heat-row';
+  div.innerHTML=`<label>Heating on at<input type="text" inputmode="numeric" placeholder="06:30" autocomplete="off" value="${esc(p.from||'')}"></label>
+  <label>Off at<input type="text" inputmode="numeric" placeholder="08:30" autocomplete="off" value="${esc(p.to||'')}"></label>
+  <button type="button" class="btn ghost small" aria-label="Remove this heating time">Remove</button>`;
+  div.querySelector('button').onclick=()=>div.remove();$('heatRows').appendChild(div)}
+function addPersonRow(p){p=p||{};const div=document.createElement('div');div.className='heat-row';
+  div.innerHTML=`<label>Name<input type="text" maxlength="40" autocomplete="off" value="${esc(p.name||'')}"></label>
+  <label>Share<input type="number" min="0" step="0.5" value="${p.share??1}"></label>
+  <button type="button" class="btn ghost small" aria-label="Remove this person">Remove</button>`;
+  div.querySelector('button').onclick=()=>div.remove();$('peopleRows').appendChild(div);enhanceInputs(div)}
+$('addPerson').onclick=()=>{addPersonRow();const r=$('peopleRows').lastElementChild;r&&r.querySelector('input').focus()};
+$('addHeatTime').onclick=()=>{addHeatRow();const r=$('heatRows').lastElementChild;r&&r.querySelector('input').focus()};
+
 $('settingsForm').addEventListener('submit',async e=>{e.preventDefault();const msg=$('settingsMsg');
   const tariffs=[...$('tariffRows').children].map(r=>{const v=[...r.querySelectorAll('input:not([data-ui])')].map(i=>i.value);return {from:v[0],eRate:+v[1]||0,eStand:+v[2]||0,gRate:+v[3]||0,gStand:+v[4]||0}}).filter(t=>t.from);
   const S={termStart:$('sStart').value,termEnd:$('sEnd').value,capAmount:+$('sCap').value||0,capPeriod:$('sCapPeriod').value,gasUnit:$('sGasUnit').value,gasCV:+$('sCV').value||39.5,seasonal:$('sSeasonal').checked,vatRate:$('sVat').value===''?5:+$('sVat').value,capInclVat:$('sCapVat').checked,weatherPlace:$('sPlace').value.trim(),palette:(settingsDoc&&settingsDoc.palette)||undefined,tariffs};
   if(!S.termStart||!S.termEnd||S.termEnd<S.termStart){msg.dataset.kind='err';msg.textContent='Set a term end date after the start date.';return}
   if(!tariffs.length){msg.dataset.kind='err';msg.textContent='Add at least one tariff row with a start date.';return}
   if(!tariffs.some(t=>t.eRate||t.gRate)){msg.dataset.kind='err';msg.textContent='Enter your unit rates (pence per kWh) from your bill.';return}
+  {const sp=$('sSet').value.trim(),periods=[];let bad=false;
+    for(const r of $('heatRows').children){const [a,b]=[...r.querySelectorAll('input')].map(i=>i.value.trim());if(!a&&!b)continue;
+      const ma=parseHM(a),mb=parseHM(b);if(!(ma>=0)||!(mb>=0)||ma%1440===mb%1440){bad=true;break}periods.push({from:fmtHM(ma),to:fmtHM(mb)})}
+    if(bad){msg.dataset.kind='err';msg.textContent='Enter each heating time as hh:mm, e.g. 06:30 to 08:30.';return}
+    if(sp!==''&&!(+sp>=10&&+sp<=30)){msg.dataset.kind='err';msg.textContent='Enter the thermostat setting in °C, between 10 and 30.';$('sSet').focus();return}
+    if(sp!==''||periods.length)S.heating={setpoint:sp===''?null:+sp,cools:$('sCools').value,periods}}
+  {const people=[];let bad='';
+    for(const r of $('peopleRows').children){const [n,v]=[...r.querySelectorAll('input:not([data-ui])')].map(i=>i.value.trim());if(!n&&(v===''||v==='1'))continue;
+      if(!n){bad='Give each person a name, or remove the row.';break}if(v!==''&&!(+v>=0)){bad='Enter each share as a number, such as 1.';break}people.push({name:n,share:v===''?1:+v})}
+    if(!bad&&people.length&&!people.some(p=>p.share>0))bad='At least one person needs a share above 0.';
+    if(bad){msg.dataset.kind='err';msg.textContent=bad;return}
+    if(people.length)S.people=people}
   if(S.seasonal&&!S.weatherPlace){msg.dataset.kind='err';msg.textContent='Enter your town or city, so the forecast can use the local weather.';$('sPlace').focus();return}
   const refetch=!settingsDoc||settingsDoc.weatherPlace!==S.weatherPlace||settingsDoc.termStart!==S.termStart||settingsDoc.termEnd!==S.termEnd||settingsDoc.seasonal!==S.seasonal;
   settingsDoc=S;queueSave();

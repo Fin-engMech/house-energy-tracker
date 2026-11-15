@@ -282,7 +282,8 @@ fn read_body(req: &mut Request) -> Value {
     read_limited(req).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or(Value::Null)
 }
 
-/// A safe file name for an export: letters, digits, `.`, `-` and `_` only, ending .csv or .json.
+/// A safe file name for an export: letters, digits, `.`, `-` and `_` only, ending .csv, .json or .html
+/// (the term summary).
 pub fn export_name(name: &str) -> String {
     let clean: String = name.chars().map(|c| if c.is_ascii_alphanumeric() || "._-".contains(c) { c } else { '-' }).collect();
     let mut clean = clean.trim_matches(['.', '-']).chars().take(80).collect::<String>();
@@ -294,7 +295,7 @@ pub fn export_name(name: &str) -> String {
         clean.insert_str(0, "export-");
     }
     let lower = clean.to_ascii_lowercase();
-    if lower.ends_with(".csv") || lower.ends_with(".json") {
+    if lower.ends_with(".csv") || lower.ends_with(".json") || lower.ends_with(".html") {
         clean
     } else if clean.is_empty() {
         "energy-export.csv".into()
@@ -357,6 +358,8 @@ mod tests {
         assert_eq!(export_name("CON.csv"), "export-CON.csv");
         assert_eq!(export_name("com1.json"), "export-com1.json");
         assert_eq!(export_name("console.csv"), "console.csv");
+        assert_eq!(export_name("energy-summary-2026-07-01-to-2027-06-30.html"), "energy-summary-2026-07-01-to-2027-06-30.html");
+        assert_eq!(export_name("x.htm"), "x.htm.csv");
     }
 
     #[test]

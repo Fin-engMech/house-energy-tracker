@@ -8,6 +8,14 @@ how much heating you have room for this month, and a daily kWh target for each f
 
 - Forecasts the rest of the term from your own usage and the weather where you live (actual temperatures,
   the 16-day forecast, then your town's typical weather), so colder months get more of the allowance.
+- Optionally, tell it your thermostat setting and heating times and it suggests a setting (never below
+  18 °C) or shorter heating times that keep the month within its allowance, and what each degree and
+  each hour costs you. It also warns you when the forecast shows a cold spell coming.
+- Import your supplier's smart meter data (the daily or half-hourly CSV from your online account), so
+  you don't have to type readings in.
+- Split the bill and anything over the cap between housemates, evenly or by share.
+- An end-of-term summary (bill against the cap month by month, meter readings, tariff, each person's
+  share) that you can save as a page and print.
 - Caps per term, per month with carry-over, or per month with each month separate. Tariff changes,
   VAT and standing charges are all costed by day.
 - Gas in kWh, m³ or ft³, with the calorific value from your bill.
