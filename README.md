@@ -4,7 +4,7 @@ A small desktop app for renters on a capped energy bill. Log your gas and electr
 billing period or from meter readings) and it tells you whether you're on course to stay under the cap,
 how much heating you have room for this month, and a daily kWh target for each fuel.
 
-![The Overview tab: projected bill against the cap, monthly usage chart with allowances, and daily kWh targets](docs/screenshot.png)
+![The Overview tab: projected bill against the cap, monthly usage chart with allowances, daily kWh targets, the heating plan and the bill split between housemates](docs/screenshot.png)
 
 - Forecasts the rest of the term from your own usage and the weather where you live (actual temperatures,
   the 16-day forecast, then your town's typical weather), so colder months get more of the allowance.
